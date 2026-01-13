@@ -28,3 +28,16 @@ t0=time.time()
 #%%=================================================================================
 #                     Parameters
 #===================================================================================
+
+dir0='/mnt/beegfs/ZEUS/FLUENT/PRECIZE/Walter-50pH2-60pJet/'
+Dirs=[
+dir0+'DUMP-03-A0/' ,
+dir0+'DUMP-04-Ray/',
+dir0+'DUMP-06-P1/' ,
+]
+
+for d in Dirs :
+    print('=> '+d)
+    dird=d+'DATA/'+'report-meta-temperature-rfile.out'
+    Dr=fl.Report_read(dird)
+    
