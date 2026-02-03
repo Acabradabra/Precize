@@ -48,7 +48,7 @@ MoyT=[]
 DevT=[]
 
 #===============> Param composition
-dil=0.5 # dilution Mf_leak/Mf_combu
+dil=0.45 # dilution Mf_leak/Mf_combu
 Rfiles={
     'O2' : 'report-o2-rfile.out',
     'CO' : 'report-co-rfile.out',
@@ -59,9 +59,12 @@ Coef= {'O2':    1e2 ,'CO':    1e6   ,'CO2': 1e2     ,'H2O':1e2      ,'N2':1e2   
 Titre={'O2':'O2 [%]','CO':'CO [ppm]','CO2':'CO2 [%]','H2O':'H2O [%]','N2':'N2 [%]'}
 Keys_s=list(Rfiles.keys()) ; Nspe=len(Keys_s)
 Compo_p={'O2':12.1,'CO':254,'CO2':36.25}
+Compo_p['N2']=100-(Compo_p['O2']+Compo_p['CO']*1e-4+Compo_p['CO2'])
 Compo_m={}
 Compo_d={}
-probe='outlet-fumes'
+# probe='outlet-fumes'
+# probe='sample_d'
+probe='sample_c'
 
 #%%=================================================================================
 #                     Process
@@ -77,6 +80,7 @@ for d in Dirs :
         fig_c,ax_c=plt.subplots(figsize=(8,6),ncols=Nspe,nrows=2)
         fig_d,ax_d=plt.subplots(figsize=(8,6),ncols=Nspe)
         fig_c.suptitle('Molar fractions (%s)'%(probe),fontsize=20)
+        fig_d.suptitle(f'Dry molar fraction : {dil*1e2:.0f} % diluted',fontsize=20)
         for n,k in enumerate(Keys_s) : #=====> Wet
             f_C=d+Rfiles[k]
             Dr=fl.Report_read(f_C) ; Keys_p=list(Dr.keys()) ; Nl=len(Dr[Keys_p[0]]) ; Ns=min([Nl,Np]) #; print(Keys_p)
@@ -106,16 +110,21 @@ for d in Dirs :
         Xd_w={  k:Wy*Yd[k]/fl.Mol_m[k] for k in Yd.keys() }
         C_dry=1-Xd_w['H2O']
         Xd_d={ k:Xd_w[k]/C_dry for k in Xd_w.keys() if k!='H2O' }
-        # for n,k in enumerate(Keys_s[:-1]+['N2']) : #=====> Dry + Dilution
-        #     ax_d[n].plot( [0] , [Xd_d[k]*Coef[k]] , 'ok')
-        #     ax_d[n].set_xticks([])
-        #     # ax_c[2,n].set_title(Titre[k],fontsize=16)
+        for n,k in enumerate(Keys_s[:-1]+['N2']) : #=====> Dry + Dilution
+            E=100*abs(Compo_p[k]-Xd_d[k]*Coef[k])/Compo_p[k]
+            ax_d[n].plot(2*[0] , [Compo_p[k],Xd_d[k]*Coef[k]] , ':k')
+            ax_d[n].plot(  [0] , [   Xd_d[k]*Coef[k]] , 'or')
+            ax_d[n].plot(  [0] , [Compo_p[k]        ] , 'ok')
+            ax_d[n].set_xticks([])
+            ax_d[n].set_title(Titre[k],fontsize=16)
+            ax_d[n].set_xlabel(f'{E:.1f} % error',fontsize=12)
         print(f"=> Dil wet composition : O2 {Xd_w['O2']*Coef['O2']:.2f} [%]  ,  CO {Xd_w['CO']*Coef['CO']:.0f} [ppm]  ,  CO2 {Xd_w['CO2']*Coef['CO2']:.2f} [%]  ,  N2 {Xd_w['N2']*Coef['N2']:.2f} [%]  ,  H2O {Xd_w['H2O']*Coef['H2O']:.2f} [%]")
         print(f"=> Dil dry composition : O2 {Xd_d['O2']*Coef['O2']:.2f} [%]  ,  CO {Xd_d['CO']*Coef['CO']:.0f} [ppm]  ,  CO2 {Xd_d['CO2']*Coef['CO2']:.2f} [%]  ,  N2 {Xd_d['N2']*Coef['N2']:.2f} [%]")
         ax_c[1,-1].axis('off')
         ax_c[0,0].set_ylabel('Wet composition',fontsize=16)
         ax_c[1,0].set_ylabel('Dry composition',fontsize=16)
-        util.SaveFig( fig_c,d+'Plot/Compo.pdf' )
+        util.SaveFig( fig_c,d+'Plot/Compo-%s.pdf'%(probe) )
+        util.SaveFig( fig_d,d+'Plot/Compo-%s_diluted.pdf'%(probe) )
 
 MoyT=array(MoyT)
 DevT=array(DevT)
