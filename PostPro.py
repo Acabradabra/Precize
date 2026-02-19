@@ -13,11 +13,11 @@
 #                     Modules
 #===================================================================================
 import Utilities as util
-(Sysa,NSysa,Arg)=util.Parseur(['Temp','Compo'],0,'Arg : ')
-(                             [ TEMP , COMPO ])=Arg
+(Sysa,NSysa,Arg)=util.Parseur(['Temp','Compo','Report'],0,'Arg : ')
+(                             [ TEMP , COMPO , REPORT])=Arg
 
 from numpy import *
-# import os
+import os
 # import sys
 # import csv
 import time
@@ -31,19 +31,23 @@ t0=time.time()
 
 Np=int(1e3)
 
-dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/Walter-50pH2-60pJet/'
+# dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/Walter-50pH2-60pJet/'
+dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M00/'
 Dirs=[
 dir0+'DUMP/'
 # dir0+'DUMP-01-Walter/',
-# dir0+'DUMP-03-A0/'    ,
+# # dir0+'DUMP-03-A0/'    ,
 # dir0+'DUMP-04-Ray/'   ,
+# dir0+'DUMP-05-DO-4433/',
 # dir0+'DUMP-06-P1/'    ,
-# dir0+'DUMP-07-S2S/' 
+# # dir0+'DUMP-07-S2S/' ,
+# dir0+'DUMP-06-NFR/' 
 ]
 
 #===============> Param temperature
 Pos_V=[0.51,2.17,3.098] # Voute thermocouples positions (m)
-T_exp=array([1214,1390,1123 , 1210])+273.15 # Pilot temperatures (K) 
+# T_exp=array([1214,1390,1123 , 1210])+273.15 # Pilot temperatures (K) 
+T_exp=array([1159.1,1351,1110.8 , 1170.2])+273.15 # Pilot temperatures (K) 
 MoyT=[]
 DevT=[]
 
@@ -63,19 +67,50 @@ Compo_p['N2']=100-(Compo_p['O2']+Compo_p['CO']*1e-4+Compo_p['CO2'])
 Compo_m={}
 Compo_d={}
 # probe='outlet-fumes'
-# probe='sample_d'
-probe='sample_c'
+probe='sample_d'
+# probe='sample_c'
+
+#===============> Inlet properties
+Tu=300 # Ambient temperature (K)
 
 #%%=================================================================================
 #                     Process
 #===================================================================================
+KeysT0=[
+    'report-meta-temperature(sample_1_vol)',
+    'report-meta-temperature(sample_2_vol)',
+    'report-meta-temperature(sample_3_vol)',
+    'report-meta-temperature(sample_a_vol)',
+    'report-meta-temperature(sample_c_vol)',
+    'report-meta-temperature(sample_d_vol)',
+    'report-meta-temperature(sample_e_vol)',
+]
+KeysT1=[
+    'report-temperature(sample_1_vol)',
+    'report-temperature(sample_2_vol)',
+    'report-temperature(sample_3_vol)',
+    'report-temperature(sample_a_vol)',
+    'report-temperature(sample_c_vol)',
+    'report-temperature(sample_d_vol)',
+    'report-temperature(sample_e_vol)',
+]
+T_dil=[]
 for d in Dirs :
-    print('=> '+d)
+    print('=> '+d) ; dirp=d+'PLOT/'
     if TEMP : #=========================> Temperature
-        f_T=d+'report-meta-temperature-rfile.out'
-        Dr=fl.Report_read(f_T) ; Keys=list(Dr.keys()) ; Nl=len(Dr[Keys[0]]) ; Ns=min([Nl,Np])
-        MoyT.append([ mean(Dr[k][-Ns:]) for k in Keys[1:] ])
-        DevT.append([ std( Dr[k][-Ns:]) for k in Keys[1:] ])
+        if os.path.exists(d+'report-meta-temperature-rfile.out') : KeysT=KeysT0 ; f0=d+'report-meta' #-temperature-rfile.out'
+        elif os.path.exists(d+'report-temperature-rfile.out')    : KeysT=KeysT1 ; f0=d+'report' #-temperature-rfile.out'
+        else : raise FileNotFoundError('No temperature rfile found !')
+        Dr=fl.Report_read(f0+'-temperature-rfile.out') ; Keys=list(Dr.keys()) ; Nl=len(Dr[Keys[0]]) ; Ns=min([Nl,Np])
+        MoyT.append([ mean(Dr[k][-Ns:]) for k in KeysT ]) ; Tb=float(MoyT[-1][-1]) ; print(f'=> Mean burned temperature : {Tb:.2f} [K]')
+        DevT.append([ std( Dr[k][-Ns:]) for k in KeysT ])
+        Dq=fl.Report_read(d+'report-heat-release-rfile.out') ; Keys=list(Dq.keys())
+        Hr=mean(Dq[Keys[1]][-Ns:]) ; print(f'=> Mean heat release rate : {Hr:.2f} W/m3')
+        Dm=fl.Report_read(d+'report-mass-balance-rfile.out') ; Keys=list(Dm.keys())
+        (Mf_f,Mf_o,Mf_b,Mf_s,Mb)=fl.Mf_sep(Dm,Keys) ; Md=mean(Mf_b[-Ns:])
+        Cp=-Hr/(Md*(Tb-Tu)) ; print(f'=> Estimated Cp : {Cp:.2f} J/Kg/K')
+        Tb2=Tu-Hr/((1+dil)*Md*Cp) ; print(f'=> Estimated Tb (with dilution {dil*1e2:.0f} %) : {Tb2:.2f} [K]')
+        T_dil.append(Tb2)
     if COMPO : #=========================> Composition
         fig_c,ax_c=plt.subplots(figsize=(8,6),ncols=Nspe,nrows=2)
         fig_d,ax_d=plt.subplots(figsize=(8,6),ncols=Nspe)
@@ -125,6 +160,53 @@ for d in Dirs :
         ax_c[1,0].set_ylabel('Dry composition',fontsize=16)
         util.SaveFig( fig_c,d+'Plot/Compo-%s.pdf'%(probe) )
         util.SaveFig( fig_d,d+'Plot/Compo-%s_diluted.pdf'%(probe) )
+    if REPORT : #=========================> Report
+        for rf in os.popen('ls %s/report-*-rfile.out'%(d)).read().splitlines() :
+            r_name=rf.split('/')[-1][7:-10]
+            Dr=fl.Report_read(rf) ; Keys=list(Dr.keys()) #; print(Keys)
+            if '(' in Keys[1] : Labels=['Iteration']+[ k.split('(')[1][:-1] for k in Keys[1:] if '(' in k ]
+            else              : Labels=Keys
+            print('=> \033[31m%s\033[0m : '%(r_name) , Labels )
+            figr,axr=plt.subplots(figsize=(10,7)) #; bxr=axr.twinx()
+            if r_name == 'mass-balance' :
+                (Mf_f,Mf_o,Mf_b,Mf_l,Mf_s,Mb)=fl.Mf_sep2(Dr,Keys)
+                print('=> fuel : %.3f g/s  ,  oxid : %.3f g/s  ,  out : %.3f g/s  ,   leak : %.3f g/s  ,  slope : %.3f g/s  ,  balance : %.3f g/s'%(mean(Mf_f[-1])*1e3,mean(Mf_o[-1])*1e3,mean(Mf_b[-1])*1e3,mean(Mf_f[-1])*1e3,mean(Mf_s[-1])*1e3,mean(Mb[-1])*1e3))
+                axr.plot( Dr['Iteration'],1e3*Mf_f  ,label='inlet-fuel'  )
+                axr.plot( Dr['Iteration'],1e3*Mf_o  ,label='inlet-oxid'  )
+                axr.plot( Dr['Iteration'],1e3*Mf_b  ,label='outlet'      )
+                axr.plot( Dr['Iteration'],1e3*Mf_l  ,label='leak'        )			
+                axr.plot( Dr['Iteration'],1e3*Mf_s  ,label='slope-zone'  )			
+                # bxr.plot( Dr['Iteration'],1e3*Mb,'k',label='mass-balance')
+                axr.plot( Dr['Iteration'],1e3*Mb,'k',label='mass-balance')
+                axr.set_ylabel('Mass flow rate [g/s]',fontsize=25)
+                figr.legend(fontsize=15,loc='center',bbox_to_anchor=(0.7,0.3))
+                #======> Detail
+                Ndet=250
+                figd,axd=plt.subplots(ncols=2,figsize=(12,6))
+                axd[0].set_title('Leaks',fontsize=25)
+                axd[0].plot( Dr['Iteration'][-Ndet:],1e3*Dr['f-bec-in'][-Ndet:],label='bec'    )
+                axd[0].plot( Dr['Iteration'][-Ndet:],1e3*Dr['pa-in'   ][-Ndet:],label='pyro-a' )
+                axd[0].plot( Dr['Iteration'][-Ndet:],1e3*Dr['pc-in'   ][-Ndet:],label='pyro-c' )
+                axd[0].plot( Dr['Iteration'][-Ndet:],1e3*Dr['pd-in'   ][-Ndet:],label='pyro-d' )
+                axd[0].plot( Dr['Iteration'][-Ndet:],1e3*Dr['v-in'    ][-Ndet:],label='visse'  )
+                axd[1].set_title('Outlet',fontsize=25)
+                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['out-t' ][-Ndet:],label='outlet-top')
+                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['out-b' ][-Ndet:],label='outlet-bot')
+                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['out-xm'][-Ndet:],label='outlet-xm' )
+                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['out-xp'][-Ndet:],label='outlet-xp' )
+                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['out-ym'][-Ndet:],label='outlet-ym' )
+                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['out-yp'][-Ndet:],label='outlet-yp' )
+                axd[0].set_ylabel('Mass flow rate [g/s]',fontsize=25)
+                axd[0].legend(fontsize=15)
+                axd[1].legend(fontsize=15)
+                util.SaveFig(figd,dirp+'MassFlow-Details.pdf')
+            else :
+                for n,k in enumerate(Keys[1:]) : axr.plot( Dr['Iteration'],Dr[k],label=Labels[n+1] )
+                if len(Keys)>2 : axr.legend(fontsize=15) #,loc='center',bbox_to_anchor=(0.7,0.3))
+            # if len(Keys)>2 : figr.legend(fontsize=15,loc='center',bbox_to_anchor=(0.7,0.3))
+            if r_name in ['heat-release','mass-balance','shell-loss','co2'] :
+                axr.ticklabel_format( axis='y' , scilimits=(-3,3) )
+            util.SaveFig(figr,dirp+'Report-%s.pdf'%(r_name))
 
 MoyT=array(MoyT)
 DevT=array(DevT)
@@ -138,6 +220,7 @@ if TEMP :
     labels=[ d.split('/')[-2].split('-')[-1] for d in Dirs ] ; Nl=len(labels)
     for i,l in enumerate(labels) :
         ax_C.plot([i,i], [T_exp[ -1],MoyT[i,-1]],'k:',alpha=0.3)
+        ax_C.plot([i],T_dil[i],'ko')
         Er=100*abs(MoyT[i,-1]-T_exp[ -1])/T_exp[ -1]
         ax_C.text(i+0.1,T_exp[ -1]+50,f'{Er:.1f} %',fontsize=12,color='k')
         ax_V.errorbar(Pos_V,MoyT[i,:3],yerr=DevT[i,:3],marker='o',label=l)
