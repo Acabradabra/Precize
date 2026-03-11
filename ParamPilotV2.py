@@ -52,12 +52,17 @@ d_os=10    # [mm] diameter oxygen side
 s_bec=14145 # [mm2] section bec
 p_bec=475   # [mm] perimeter bec
 s_pyro=50   # [mm] size pyro
-s_chem=1474875 # [mm2] section chemney
-p_chem=8100    # [mm] perimeter chemney
-d_vis=154.5 # [mm] diameter visse
-h_out=2e3  # [mm] height of the outlet
-x_out=1260 # [mm] length of the outlet
-y_out=1500 # [mm] length of the outlet
+d_vis=104   # [mm] diameter visse
+d_chem=307.9 # [mm] diameter chemney
+s_out=25397 # [mm2] section outlet
+p_out=795   # [mm] perimeter outlet
+s_f2=101587 # [mm2] section fluid ext inlet
+p_f2=2538   # [mm] perimeter fluid ext inlet
+h_jup=455   # [mm] height jupe
+h_dil=102   # [mm] height dilution
+l_dil=430   # [mm] length dilution
+h_jeu=17    # [mm] height jeu
+l_jeu=335   # [mm] length jeu
 
 #====================> Klinker parameters
 mdot=5 # [T/j] production klinker

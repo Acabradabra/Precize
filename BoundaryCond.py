@@ -30,8 +30,8 @@ t0=time.time()
 #===================================================================================
 
 param=Sysa[0]
-if   'Walter' in param : from ParamWalter import *
-elif 'Pilot'  in param : from ParamPilot  import *
+if   'Walter' in param : from ParamWalter   import *
+elif 'Pilot'  in param : from ParamPilotV2  import *
 else                   : raise ValueError('Unknown param file !')
 
 # unit='g/s'
@@ -140,10 +140,16 @@ hd_os=4*s_os/p_os        # Oxygen side jet hydraulic diameter (mm)
 
 hd_bec=4*s_bec/p_bec      # Hydraulic diameter bec (mm)
 hd_pyro=s_pyro            # Hydraulic diameter pyro (mm)
-hd_chem=4*s_chem/p_chem   # Hydraulic diameter chemney (mm)
-hd_vis=d_vis              # Hydraulic diameter visse (mm)
-hd_out_x=2*y_out*h_out/(y_out+h_out) # Hydraulic diameter outlet side (mm)
-hd_out_y=2*x_out*h_out/(x_out+h_out) # Hydraulic diameter outlet side (mm)
+hd_vis =d_vis             # Hydraulic diameter visse (mm)
+hd_chem=d_chem            # Hydraulic diameter chemney (mm)
+hd_out=4*s_out/p_out      # Hydraulic diameter fluid ext outlet (mm)
+hd_f2=4*s_f2/p_f2         # Hydraulic diameter fluid ext inlet (mm)
+hd_dil=2*h_dil*l_dil/(h_dil+l_dil) # Hydraulic diameter dilution (mm)
+hd_jup=2*h_jup*l_dil/(h_jup+l_dil) # Hydraulic diameter dilution (mm)
+hd_jeu=2*h_jeu*l_jeu/(h_jeu+l_jeu) # Hydraulic diameter jeu (mm)
+# hd_chem=4*s_chem/p_chem   # Hydraulic diameter chemney (mm)
+# hd_out_x=2*y_out*h_out/(y_out+h_out) # Hydraulic diameter outlet side (mm)
+# hd_out_y=2*x_out*h_out/(x_out+h_out) # Hydraulic diameter outlet side (mm)
 
 #%%=================================================================================
 #                     Klinker
@@ -157,11 +163,29 @@ mdot_h2o=mdot_alooh*y_h2o_alooh+mdot_humid
 mdot_co2=mdot_caco3*y_co2_caco3
 
 #%%=================================================================================
+#                     Pressure Loss
+#===================================================================================
+A_tot=A_viss+3*A_pyro
+m_leak=M_leak/A_tot
+K_viss=nu*L_viss*m_leak/DP
+K_pyro=nu*L_pyro*m_leak/DP
+Rv_viss=1/K_viss
+Rv_pyro=1/K_pyro
+Rv_jupe=1e6
+
+print(f'=> Permeability viss : {K_viss:.3e} [m2]  =>  Visc res : {Rv_viss:.3e} [1/m2] ')
+print(f'=> Permeability pyro : {K_pyro:.3e} [m2]  =>  Visc res : {Rv_pyro:.3e} [1/m2] ')
+
+#%%=================================================================================
 #                     Writing
 #===================================================================================
 if FILE :
     print('\n'+util.Col('b','=> Writing : '+f_param))
     Param={}
+    Param["hrr"                   ]=[ 'HeatofReaction/CellVolume' , ''       , "hrr"                   , ''                          ]
+    Param["pstat_ext"             ]=[ '-rho_air*g*Position.z'     , ''       , "pstat_ext"             , 'pressure'                  ]
+    Param["pdyn_ext"              ]=[ 'pstat_ext+DynamicPressure' , ''       , "pdyn_ext"              , 'pressure'                  ]
+    Param["rho_air"               ]=[ f'{Rho_air    :.2f}'  , ' [kg/m^3]'    , "rho_air"               , 'density'                   ]
     Param["box_htc"               ]=[ f'{1000       :.0f}'  , ' [W/(m^2 K)]' , "box_htc"               , 'heat-transfer-coefficient' ]
     Param["mdot_fuel_top_annular" ]=[ f'{M_ta *fac  :.12e}' , ' [%s]'%(unit) , "mdot_fuel_top_annular" , 'mass-flow'                 ]
     Param["mdot_fuel_top_axial"   ]=[ f'{M_tc *fac  :.12e}' , ' [%s]'%(unit) , "mdot_fuel_top_axial"   , 'mass-flow'                 ]
@@ -188,10 +212,16 @@ if FILE :
     Param["hd_os"                 ]=[ f'{ hd_os     :.3f}'  , ' [mm]'        , "hd_os"                 , 'length'                    ]
     Param["hd_bec"                ]=[ f'{ hd_bec    :.3f}'  , ' [mm]'        , "hd_bec"                , 'length'                    ]
     Param["hd_pyro"               ]=[ f'{ hd_pyro   :.3f}'  , ' [mm]'        , "hd_pyro"               , 'length'                    ]
-    Param["hd_chem"               ]=[ f'{ hd_chem   :.3f}'  , ' [mm]'        , "hd_chem"               , 'length'                    ]
     Param["hd_vis"                ]=[ f'{ hd_vis    :.3f}'  , ' [mm]'        , "hd_vis"                , 'length'                    ]
-    Param["hd_out_x"              ]=[ f'{ hd_out_x  :.3f}'  , ' [mm]'        , "hd_out_x"              , 'length'                    ]
-    Param["hd_out_y"              ]=[ f'{ hd_out_y  :.3f}'  , ' [mm]'        , "hd_out_y"              , 'length'                    ]
+    Param["hd_chem"               ]=[ f'{ hd_chem   :.3f}'  , ' [mm]'        , "hd_chem"               , 'length'                    ]
+    Param["hd_out"                ]=[ f'{ hd_out    :.3f}'  , ' [mm]'        , "hd_out"                , 'length'                    ]
+    Param["hd_f2"                 ]=[ f'{ hd_f2     :.3f}'  , ' [mm]'        , "hd_f2"                 , 'length'                    ]
+    Param["hd_dil"                ]=[ f'{ hd_dil    :.3f}'  , ' [mm]'        , "hd_dil"                , 'length'                    ]
+    Param["hd_jup"                ]=[ f'{ hd_jup    :.3f}'  , ' [mm]'        , "hd_jup"                , 'length'                    ]
+    Param["hd_jeu"                ]=[ f'{ hd_jeu    :.3f}'  , ' [mm]'        , "hd_jeu"                , 'length'                    ]
+    Param["rv_viss"               ]=[ f'{ Rv_viss   :.3f}'  , ' [m^-2]'      , "rv_viss"               , ''                          ]
+    Param["rv_pyro"               ]=[ f'{ Rv_pyro   :.3f}'  , ' [m^-2]'      , "rv_pyro"               , ''                          ]
+    Param["rv_jupe"               ]=[ f'{ Rv_jupe   :.3f}'  , ' [m^-2]'      , "rv_jupe"               , ''                          ]
 
     with open(f_param,'w') as f :
         f.write( 'name\tdefinition\tdescription\tparameterid\tparametername\tunit\tinput-parameter\toutput-parameter\t\n')

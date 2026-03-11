@@ -13,8 +13,8 @@
 #                     Modules
 #===================================================================================
 import Utilities as util
-(Sysa,NSysa,Arg)=util.Parseur(['Temp','Compo','Report'],0,'Arg : ')
-(                             [ TEMP , COMPO , REPORT])=Arg
+(Sysa,NSysa,Arg)=util.Parseur(['Temp','Compo','Report','Visu'],0,'Arg : ')
+(                             [ TEMP , COMPO , REPORT , VISU ])=Arg
 
 from numpy import *
 import os
@@ -32,16 +32,11 @@ t0=time.time()
 Np=int(1e3)
 
 # dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/Walter-50pH2-60pJet/'
-dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M00/'
+dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/'
 Dirs=[
 dir0+'DUMP/'
-# dir0+'DUMP-01-Walter/',
-# # dir0+'DUMP-03-A0/'    ,
-# dir0+'DUMP-04-Ray/'   ,
-# dir0+'DUMP-05-DO-4433/',
-# dir0+'DUMP-06-P1/'    ,
-# # dir0+'DUMP-07-S2S/' ,
-# dir0+'DUMP-06-NFR/' 
+# dir0+'DUMP-10-Ignit/',
+# dir0+'DUMP-11-800kW/'
 ]
 
 #===============> Param temperature
@@ -97,7 +92,7 @@ KeysT1=[
 T_dil=[]
 for d in Dirs :
     print('=> '+d) ; dirp=d+'PLOT/'
-    if TEMP : #=========================> Temperature
+    if TEMP : #===========================================================================> Temperature
         if os.path.exists(d+'report-meta-temperature-rfile.out') : KeysT=KeysT0 ; f0=d+'report-meta' #-temperature-rfile.out'
         elif os.path.exists(d+'report-temperature-rfile.out')    : KeysT=KeysT1 ; f0=d+'report' #-temperature-rfile.out'
         else : raise FileNotFoundError('No temperature rfile found !')
@@ -111,7 +106,7 @@ for d in Dirs :
         Cp=-Hr/(Md*(Tb-Tu)) ; print(f'=> Estimated Cp : {Cp:.2f} J/Kg/K')
         Tb2=Tu-Hr/((1+dil)*Md*Cp) ; print(f'=> Estimated Tb (with dilution {dil*1e2:.0f} %) : {Tb2:.2f} [K]')
         T_dil.append(Tb2)
-    if COMPO : #=========================> Composition
+    if COMPO : #===========================================================================> Composition
         fig_c,ax_c=plt.subplots(figsize=(8,6),ncols=Nspe,nrows=2)
         fig_d,ax_d=plt.subplots(figsize=(8,6),ncols=Nspe)
         fig_c.suptitle('Molar fractions (%s)'%(probe),fontsize=20)
@@ -160,7 +155,7 @@ for d in Dirs :
         ax_c[1,0].set_ylabel('Dry composition',fontsize=16)
         util.SaveFig( fig_c,d+'Plot/Compo-%s.pdf'%(probe) )
         util.SaveFig( fig_d,d+'Plot/Compo-%s_diluted.pdf'%(probe) )
-    if REPORT : #=========================> Report
+    if REPORT : #===========================================================================> Report
         for rf in os.popen('ls %s/report-*-rfile.out'%(d)).read().splitlines() :
             r_name=rf.split('/')[-1][7:-10]
             Dr=fl.Report_read(rf) ; Keys=list(Dr.keys()) #; print(Keys)
@@ -169,8 +164,10 @@ for d in Dirs :
             print('=> \033[31m%s\033[0m : '%(r_name) , Labels )
             figr,axr=plt.subplots(figsize=(10,7)) #; bxr=axr.twinx()
             if r_name == 'mass-balance' :
-                (Mf_f,Mf_o,Mf_b,Mf_l,Mf_s,Mb)=fl.Mf_sep2(Dr,Keys)
-                print('=> fuel : %.3f g/s  ,  oxid : %.3f g/s  ,  out : %.3f g/s  ,   leak : %.3f g/s  ,  slope : %.3f g/s  ,  balance : %.3f g/s'%(mean(Mf_f[-1])*1e3,mean(Mf_o[-1])*1e3,mean(Mf_b[-1])*1e3,mean(Mf_f[-1])*1e3,mean(Mf_s[-1])*1e3,mean(Mb[-1])*1e3))
+                (Mf_f,Mf_o,Mf_b,Mf_l,Mf_s,Mb)=fl.Mf_sep2(Dr,Keys) ; Ns=min([len(Mb),Np])
+                M_l=mean(Mf_l[-Ns:]) ; M_c=mean(Mf_f[-Ns:])+mean(Mf_o[-Ns:]) ; Q_l=3600*M_l/fl.Rho0_air ; R_l=100*M_l/M_c
+                print('=> fuel : %.3f g/s  ,  oxid : %.3f g/s  ,  out : %.3f g/s  ,   leak : %.3f g/s  ,  slope : %.3f g/s  ,  balance : %.3f g/s'%(mean(Mf_f[-Ns:])*1e3,mean(Mf_o[-Ns:])*1e3,mean(Mf_b[-Ns:])*1e3,M_l*1e3,mean(Mf_s[-Ns:])*1e3,mean(Mb[-Ns:])*1e3))
+                print(f'=> Leak : {Q_l:.3f} [Nm3/h]  ,  {R_l:.2f} % Mf+Mo')
                 axr.plot( Dr['Iteration'],1e3*Mf_f  ,label='inlet-fuel'  )
                 axr.plot( Dr['Iteration'],1e3*Mf_o  ,label='inlet-oxid'  )
                 axr.plot( Dr['Iteration'],1e3*Mf_b  ,label='outlet'      )
@@ -179,7 +176,8 @@ for d in Dirs :
                 # bxr.plot( Dr['Iteration'],1e3*Mb,'k',label='mass-balance')
                 axr.plot( Dr['Iteration'],1e3*Mb,'k',label='mass-balance')
                 axr.set_ylabel('Mass flow rate [g/s]',fontsize=25)
-                figr.legend(fontsize=15,loc='center',bbox_to_anchor=(0.7,0.3))
+                # figr.legend(fontsize=15,loc='center',bbox_to_anchor=(0.7,0.3))
+                axr.legend(fontsize=15)
                 #======> Detail
                 Ndet=250
                 figd,axd=plt.subplots(ncols=2,figsize=(12,6))
@@ -190,12 +188,10 @@ for d in Dirs :
                 axd[0].plot( Dr['Iteration'][-Ndet:],1e3*Dr['pd-in'   ][-Ndet:],label='pyro-d' )
                 axd[0].plot( Dr['Iteration'][-Ndet:],1e3*Dr['v-in'    ][-Ndet:],label='visse'  )
                 axd[1].set_title('Outlet',fontsize=25)
-                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['out-t' ][-Ndet:],label='outlet-top')
-                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['out-b' ][-Ndet:],label='outlet-bot')
-                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['out-xm'][-Ndet:],label='outlet-xm' )
-                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['out-xp'][-Ndet:],label='outlet-xp' )
-                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['out-ym'][-Ndet:],label='outlet-ym' )
-                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['out-yp'][-Ndet:],label='outlet-yp' )
+                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['f-out'   ][-Ndet:],label='outlet')
+                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['f-jeu'   ][-Ndet:],label='jeu')
+                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['f-jupe'  ][-Ndet:],label='jupe')
+                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['f-dilute'][-Ndet:],label='dilute')
                 axd[0].set_ylabel('Mass flow rate [g/s]',fontsize=25)
                 axd[0].legend(fontsize=15)
                 axd[1].legend(fontsize=15)
