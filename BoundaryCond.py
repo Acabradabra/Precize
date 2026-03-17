@@ -144,8 +144,9 @@ hd_vis =d_vis             # Hydraulic diameter visse (mm)
 hd_chem=d_chem            # Hydraulic diameter chemney (mm)
 hd_out=4*s_out/p_out      # Hydraulic diameter fluid ext outlet (mm)
 hd_f2=4*s_f2/p_f2         # Hydraulic diameter fluid ext inlet (mm)
+hd_jb=4*s_jb/p_jb         # Hydraulic diameter fluid ext inlet (mm)
 hd_dil=2*h_dil*l_dil/(h_dil+l_dil) # Hydraulic diameter dilution (mm)
-hd_jup=2*h_jup*l_dil/(h_jup+l_dil) # Hydraulic diameter dilution (mm)
+hd_jup=2*h_jup*l_dil/(h_jup+l_dil) # Hydraulic diameter jupe (mm)
 hd_jeu=2*h_jeu*l_jeu/(h_jeu+l_jeu) # Hydraulic diameter jeu (mm)
 # hd_chem=4*s_chem/p_chem   # Hydraulic diameter chemney (mm)
 # hd_out_x=2*y_out*h_out/(y_out+h_out) # Hydraulic diameter outlet side (mm)
@@ -154,27 +155,43 @@ hd_jeu=2*h_jeu*l_jeu/(h_jeu+l_jeu) # Hydraulic diameter jeu (mm)
 #%%=================================================================================
 #                     Klinker
 #===================================================================================
+y_h2o_feed=(y_h2o_caco3*y_caco3_feed+y_h2o_alooh*y_alooh_feed) # mass fraction of humidity in raw material
+y_co2_feed=(y_co2_caco3*y_caco3_feed                         ) # mass fraction of CO2      in raw material
+y_kk=1-(y_h2o_feed+y_co2_feed) # mass fraction of klinker in raw material
+mdot_rm=mdot_kk/y_kk # mass flow rate of raw material
 
-mdot_alooh=mdot*y_alooh_feed
-mdot_caco3=mdot*y_caco3_feed
-mdot_humid=mdot*y_humid_feed
+# mdot_alooh=mdot*y_alooh_feed
+# mdot_caco3=mdot*y_caco3_feed
+# mdot_humid=mdot*y_humid_feed
 
-mdot_h2o=mdot_alooh*y_h2o_alooh+mdot_humid
-mdot_co2=mdot_caco3*y_co2_caco3
+mdot_h2o=y_h2o_feed*mdot_rm #mdot_alooh*y_h2o_alooh+mdot_humid
+mdot_co2=y_co2_feed*mdot_rm #mdot_caco3*y_co2_caco3
+
+mdot_h2o*=(1e3/(3600*24)) # [kg/s]
+mdot_co2*=(1e3/(3600*24)) # [kg/s]
+
+print('\n=> '+util.Col('r','Mass flux from solid [Ks/s] :'))
+print(f'=> H2O : {mdot_h2o*fac:.3f} [{unit:s}]  ,  {mdot_h2o*1e3:.3f} [g/s]')
+print(f'=> CO2 : {mdot_co2*fac:.3f} [{unit:s}]  ,  {mdot_co2*1e3:.3f} [g/s]')
 
 #%%=================================================================================
 #                     Pressure Loss
 #===================================================================================
-A_tot=A_viss+3*A_pyro
-m_leak=M_leak/A_tot
-K_viss=nu*L_viss*m_leak/DP
-K_pyro=nu*L_pyro*m_leak/DP
+A_tot =(A_viss+3*A_pyro)*1e-6
+A_jupe=(4*h_jup*l_dil  )*1e-6
+m_leak=1e-3*M_leak/A_tot
+m_jupe=1e-3*M_jupe/A_jupe
+K_viss=mu*L_viss*m_leak/DP_leak
+K_pyro=mu*L_pyro*m_leak/DP_leak
+K_jupe=mu*L_jupe*m_jupe/DP_jupe
 Rv_viss=1/K_viss
 Rv_pyro=1/K_pyro
-Rv_jupe=1e6
+Rv_jupe=1/K_jupe
 
+print('\n=> '+util.Col('r','Permeability :'))
 print(f'=> Permeability viss : {K_viss:.3e} [m2]  =>  Visc res : {Rv_viss:.3e} [1/m2] ')
 print(f'=> Permeability pyro : {K_pyro:.3e} [m2]  =>  Visc res : {Rv_pyro:.3e} [1/m2] ')
+print(f'=> Permeability jupe : {K_jupe:.3e} [m2]  =>  Visc res : {Rv_jupe:.3e} [1/m2] ')
 
 #%%=================================================================================
 #                     Writing
@@ -182,46 +199,57 @@ print(f'=> Permeability pyro : {K_pyro:.3e} [m2]  =>  Visc res : {Rv_pyro:.3e} [
 if FILE :
     print('\n'+util.Col('b','=> Writing : '+f_param))
     Param={}
-    Param["hrr"                   ]=[ 'HeatofReaction/CellVolume' , ''       , "hrr"                   , ''                          ]
-    Param["pstat_ext"             ]=[ '-rho_air*g*Position.z'     , ''       , "pstat_ext"             , 'pressure'                  ]
-    Param["pdyn_ext"              ]=[ 'pstat_ext+DynamicPressure' , ''       , "pdyn_ext"              , 'pressure'                  ]
-    Param["rho_air"               ]=[ f'{Rho_air    :.2f}'  , ' [kg/m^3]'    , "rho_air"               , 'density'                   ]
-    Param["box_htc"               ]=[ f'{1000       :.0f}'  , ' [W/(m^2 K)]' , "box_htc"               , 'heat-transfer-coefficient' ]
-    Param["mdot_fuel_top_annular" ]=[ f'{M_ta *fac  :.12e}' , ' [%s]'%(unit) , "mdot_fuel_top_annular" , 'mass-flow'                 ]
-    Param["mdot_fuel_top_axial"   ]=[ f'{M_tc *fac  :.12e}' , ' [%s]'%(unit) , "mdot_fuel_top_axial"   , 'mass-flow'                 ]
-    Param["mdot_fuel_bot_annular" ]=[ f'{M_ba *fac  :.12e}' , ' [%s]'%(unit) , "mdot_fuel_bot_annular" , 'mass-flow'                 ]
-    Param["mdot_fuel_bot_axial"   ]=[ f'{M_bc *fac  :.12e}' , ' [%s]'%(unit) , "mdot_fuel_bot_axial"   , 'mass-flow'                 ]
-    Param["mdot_oxid_porthole"    ]=[ f'{MO_hb      :.12e}' , ' [%s]'%(unit) , "mdot_oxid_porthole"    , 'mass-flow'                 ]
-    Param["mdot_oxid_top"         ]=[ f'{MO_t *fac  :.12e}' , ' [%s]'%(unit) , "mdot_oxid_top"         , 'mass-flow'                 ]
-    Param["mdot_oxid_bottom"      ]=[ f'{MO_bc*fac  :.12e}' , ' [%s]'%(unit) , "mdot_oxid_bottom"      , 'mass-flow'                 ]
-    Param["mdot_oxid_staged"      ]=[ f'{MO_bs*fac  :.12e}' , ' [%s]'%(unit) , "mdot_oxid_staged"      , 'mass-flow'                 ]
-    Param["temp_bath"             ]=[ f'{1723       :.0f}'  , ' [K]'         , "temp_bath"             , 'temperature'               ]
-    Param["temp_ext"              ]=[ f'{300        :.0f}'  , ' [K]'         , "temp_ext"              , 'temperature'               ]
-    Param["temp_fuel"             ]=[ f'{300        :.0f}'  , ' [K]'         , "temp_fuel"             , 'temperature'               ]
-    Param["temp_oxid"             ]=[ f'{300        :.0f}'  , ' [K]'         , "temp_oxid"             , 'temperature'               ]
-    Param["temp_water"            ]=[ f'{300        :.0f}'  , ' [K]'         , "temp_water"            , 'temperature'               ]
-    Param["x_fuel_c2h6"           ]=[ f'{X_f['C2H6']:.12e}' , ''             , "x_fuel_c2h6"           , ''                          ]
-    Param["x_fuel_ch4"            ]=[ f'{X_f['CH4' ]:.12e}' , ''             , "x_fuel_ch4"            , ''                          ]
-    Param["x_fuel_co2"            ]=[ f'{X_f['CO2' ]:.12e}' , ''             , "x_fuel_co2"            , ''                          ]
-    Param["x_fuel_h2"             ]=[ f'{X_f['H2'  ]:.12e}' , ''             , "x_fuel_h2"             , ''                          ]
-    Param["x_oxid_o2"             ]=[ f'{ 1         :.0f}'  , ''             , "x_oxid_o2"             , ''                          ]
-    Param["hd_fc"                 ]=[ f'{ hd_fc     :.3f}'  , ' [mm]'        , "hd_fc"                 , 'length'                    ]
-    Param["hd_fs"                 ]=[ f'{ hd_fs     :.3f}'  , ' [mm]'        , "hd_fs"                 , 'length'                    ]
-    Param["hd_oh"                 ]=[ f'{ hd_oh     :.3f}'  , ' [mm]'        , "hd_oh"                 , 'length'                    ]
-    Param["hd_oc"                 ]=[ f'{ hd_oc     :.3f}'  , ' [mm]'        , "hd_oc"                 , 'length'                    ]
-    Param["hd_os"                 ]=[ f'{ hd_os     :.3f}'  , ' [mm]'        , "hd_os"                 , 'length'                    ]
-    Param["hd_bec"                ]=[ f'{ hd_bec    :.3f}'  , ' [mm]'        , "hd_bec"                , 'length'                    ]
-    Param["hd_pyro"               ]=[ f'{ hd_pyro   :.3f}'  , ' [mm]'        , "hd_pyro"               , 'length'                    ]
-    Param["hd_vis"                ]=[ f'{ hd_vis    :.3f}'  , ' [mm]'        , "hd_vis"                , 'length'                    ]
-    Param["hd_chem"               ]=[ f'{ hd_chem   :.3f}'  , ' [mm]'        , "hd_chem"               , 'length'                    ]
-    Param["hd_out"                ]=[ f'{ hd_out    :.3f}'  , ' [mm]'        , "hd_out"                , 'length'                    ]
-    Param["hd_f2"                 ]=[ f'{ hd_f2     :.3f}'  , ' [mm]'        , "hd_f2"                 , 'length'                    ]
-    Param["hd_dil"                ]=[ f'{ hd_dil    :.3f}'  , ' [mm]'        , "hd_dil"                , 'length'                    ]
-    Param["hd_jup"                ]=[ f'{ hd_jup    :.3f}'  , ' [mm]'        , "hd_jup"                , 'length'                    ]
-    Param["hd_jeu"                ]=[ f'{ hd_jeu    :.3f}'  , ' [mm]'        , "hd_jeu"                , 'length'                    ]
-    Param["rv_viss"               ]=[ f'{ Rv_viss   :.3f}'  , ' [m^-2]'      , "rv_viss"               , ''                          ]
-    Param["rv_pyro"               ]=[ f'{ Rv_pyro   :.3f}'  , ' [m^-2]'      , "rv_pyro"               , ''                          ]
-    Param["rv_jupe"               ]=[ f'{ Rv_jupe   :.3f}'  , ' [m^-2]'      , "rv_jupe"               , ''                          ]
+    Param["hrr"                   ]=[ 'HeatofReaction/CellVolume' , ''       , "hrr"                   , ''                           ]
+    Param["pstat_ext"             ]=[ '-rho_air*g*Position.z'     , ''       , "pstat_ext"             , 'pressure'                   ]
+    Param["pdyn_ext"              ]=[ 'pstat_ext+DynamicPressure' , ''       , "pdyn_ext"              , 'pressure'                   ]
+    Param["area_tc"               ]=[ "Area(['f-tc'])"            , ''       , "area_tc"               , ''                           ]
+    Param["eps_refract"           ]=[ f'{e_refract   :.2f}'  , ''             , "eps_refract"           , ''                          ]
+    Param["eps_shell"             ]=[ f'{e_shell     :.2f}'  , ''             , "eps_shell"             , ''                          ]
+    Param["eps_ss304"             ]=[ f'{e_ss304     :.2f}'  , ''             , "eps_ss304"             , ''                          ]
+    Param["htc_wb"                ]=[ f'{h_wb        :.0f}'  , ' [W/(m^2 K)]' , "htc_wb"                , 'heat-transfer-coefficient' ]
+    Param["htc_nat"               ]=[ f'{h_nat       :.0f}'  , ' [W/(m^2 K)]' , "htc_nat"               , 'heat-transfer-coefficient' ]
+    Param["htc_col"               ]=[ f'{h_col       :.0f}'  , ' [W/(m^2 K)]' , "htc_col"               , 'heat-transfer-coefficient' ]
+    Param["rho_air"               ]=[ f'{Rho_air     :.2f}'  , ' [kg/m^3]'    , "rho_air"               , 'density'                   ]
+    Param["mdot_fuel_top_annular" ]=[ f'{M_ta *fac   :.12e}' , ' [%s]'%(unit) , "mdot_fuel_top_annular" , 'mass-flow'                 ]
+    Param["mdot_fuel_top_axial"   ]=[ f'{M_tc *fac   :.12e}' , ' [%s]'%(unit) , "mdot_fuel_top_axial"   , 'mass-flow'                 ]
+    Param["mdot_fuel_bot_annular" ]=[ f'{M_ba *fac   :.12e}' , ' [%s]'%(unit) , "mdot_fuel_bot_annular" , 'mass-flow'                 ]
+    Param["mdot_fuel_bot_axial"   ]=[ f'{M_bc *fac   :.12e}' , ' [%s]'%(unit) , "mdot_fuel_bot_axial"   , 'mass-flow'                 ]
+    Param["mdot_oxid_porthole"    ]=[ f'{MO_hb       :.12e}' , ' [%s]'%(unit) , "mdot_oxid_porthole"    , 'mass-flow'                 ]
+    Param["mdot_oxid_top"         ]=[ f'{MO_t *fac   :.12e}' , ' [%s]'%(unit) , "mdot_oxid_top"         , 'mass-flow'                 ]
+    Param["mdot_oxid_bottom"      ]=[ f'{MO_bc*fac   :.12e}' , ' [%s]'%(unit) , "mdot_oxid_bottom"      , 'mass-flow'                 ]
+    Param["mdot_oxid_staged"      ]=[ f'{MO_bs*fac   :.12e}' , ' [%s]'%(unit) , "mdot_oxid_staged"      , 'mass-flow'                 ]
+    Param["mdot_h2o"              ]=[ f'{mdot_h2o*fac:.12e}' , ' [%s]'%(unit) , "mdot_h2o"              , 'mass-flow'                 ]
+    Param["mdot_co2"              ]=[ f'{mdot_co2*fac:.12e}' , ' [%s]'%(unit) , "mdot_co2"              , 'mass-flow'                 ]
+    Param["smdot_h2o"             ]=[ 'mdot_h2o/area_tc'     , ''             , "smdot_h2o"             , ''                          ]
+    Param["smdot_co2"             ]=[ 'mdot_co2/area_tc'     , ''             , "smdot_co2"             , ''                          ]
+    Param["temp_bath"             ]=[ f'{1723        :.0f}'  , ' [K]'         , "temp_bath"             , 'temperature'               ]
+    Param["temp_ext"              ]=[ f'{300         :.0f}'  , ' [K]'         , "temp_ext"              , 'temperature'               ]
+    Param["temp_fuel"             ]=[ f'{300         :.0f}'  , ' [K]'         , "temp_fuel"             , 'temperature'               ]
+    Param["temp_oxid"             ]=[ f'{300         :.0f}'  , ' [K]'         , "temp_oxid"             , 'temperature'               ]
+    Param["temp_water"            ]=[ f'{300         :.0f}'  , ' [K]'         , "temp_water"            , 'temperature'               ]
+    Param["x_fuel_c2h6"           ]=[ f'{X_f['C2H6'] :.12e}' , ''             , "x_fuel_c2h6"           , ''                          ]
+    Param["x_fuel_ch4"            ]=[ f'{X_f['CH4' ] :.12e}' , ''             , "x_fuel_ch4"            , ''                          ]
+    Param["x_fuel_co2"            ]=[ f'{X_f['CO2' ] :.12e}' , ''             , "x_fuel_co2"            , ''                          ]
+    Param["x_fuel_h2"             ]=[ f'{X_f['H2'  ] :.12e}' , ''             , "x_fuel_h2"             , ''                          ]
+    Param["x_oxid_o2"             ]=[ f'{ 1          :.0f}'  , ''             , "x_oxid_o2"             , ''                          ]
+    Param["hd_fc"                 ]=[ f'{ hd_fc      :.3f}'  , ' [mm]'        , "hd_fc"                 , 'length'                    ]
+    Param["hd_fs"                 ]=[ f'{ hd_fs      :.3f}'  , ' [mm]'        , "hd_fs"                 , 'length'                    ]
+    Param["hd_oh"                 ]=[ f'{ hd_oh      :.3f}'  , ' [mm]'        , "hd_oh"                 , 'length'                    ]
+    Param["hd_oc"                 ]=[ f'{ hd_oc      :.3f}'  , ' [mm]'        , "hd_oc"                 , 'length'                    ]
+    Param["hd_os"                 ]=[ f'{ hd_os      :.3f}'  , ' [mm]'        , "hd_os"                 , 'length'                    ]
+    Param["hd_bec"                ]=[ f'{ hd_bec     :.3f}'  , ' [mm]'        , "hd_bec"                , 'length'                    ]
+    Param["hd_pyro"               ]=[ f'{ hd_pyro    :.3f}'  , ' [mm]'        , "hd_pyro"               , 'length'                    ]
+    Param["hd_vis"                ]=[ f'{ hd_vis     :.3f}'  , ' [mm]'        , "hd_vis"                , 'length'                    ]
+    Param["hd_chem"               ]=[ f'{ hd_chem    :.3f}'  , ' [mm]'        , "hd_chem"               , 'length'                    ]
+    Param["hd_out"                ]=[ f'{ hd_out     :.3f}'  , ' [mm]'        , "hd_out"                , 'length'                    ]
+    Param["hd_f2"                 ]=[ f'{ hd_f2      :.3f}'  , ' [mm]'        , "hd_f2"                 , 'length'                    ]
+    Param["hd_jb"                 ]=[ f'{ hd_jb      :.3f}'  , ' [mm]'        , "hd_jb"                 , 'length'                    ]
+    Param["hd_dil"                ]=[ f'{ hd_dil     :.3f}'  , ' [mm]'        , "hd_dil"                , 'length'                    ]
+    Param["hd_jup"                ]=[ f'{ hd_jup     :.3f}'  , ' [mm]'        , "hd_jup"                , 'length'                    ]
+    Param["hd_jeu"                ]=[ f'{ hd_jeu     :.3f}'  , ' [mm]'        , "hd_jeu"                , 'length'                    ]
+    Param["rv_viss"               ]=[ f'{ Rv_viss    :.3e}'  , ' [m^-2]'      , "rv_viss"               , ''                          ]
+    Param["rv_pyro"               ]=[ f'{ Rv_pyro    :.3e}'  , ' [m^-2]'      , "rv_pyro"               , ''                          ]
+    Param["rv_jupe"               ]=[ f'{ Rv_jupe    :.3e}'  , ' [m^-2]'      , "rv_jupe"               , ''                          ]
 
     with open(f_param,'w') as f :
         f.write( 'name\tdefinition\tdescription\tparameterid\tparametername\tunit\tinput-parameter\toutput-parameter\t\n')

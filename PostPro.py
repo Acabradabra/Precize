@@ -47,7 +47,8 @@ MoyT=[]
 DevT=[]
 
 #===============> Param composition
-dil=0.45 # dilution Mf_leak/Mf_combu
+# dil=0.45 # dilution Mf_leak/Mf_tot
+dil=0.20 # dilution Mf_leak/Mf_tot
 Rfiles={
     'O2' : 'report-o2-rfile.out',
     'CO' : 'report-co-rfile.out',
@@ -62,7 +63,8 @@ Compo_p['N2']=100-(Compo_p['O2']+Compo_p['CO']*1e-4+Compo_p['CO2'])
 Compo_m={}
 Compo_d={}
 # probe='outlet-fumes'
-probe='sample_d'
+probe='pd'
+# probe='sample_d'
 # probe='sample_c'
 
 #===============> Inlet properties
@@ -113,10 +115,13 @@ for d in Dirs :
         fig_d.suptitle(f'Dry molar fraction : {dil*1e2:.0f} % diluted',fontsize=20)
         for n,k in enumerate(Keys_s) : #=====> Wet
             f_C=d+Rfiles[k]
-            Dr=fl.Report_read(f_C) ; Keys_p=list(Dr.keys()) ; Nl=len(Dr[Keys_p[0]]) ; Ns=min([Nl,Np]) #; print(Keys_p)
-            key=[ kk for kk in Keys_p if probe in kk ][0]
-            Compo_m[k]=mean(Dr[key][-Ns:])*Coef[k]
-            Compo_d[k]=std( Dr[key][-Ns:])*Coef[k]
+            if os.path.exists(f_C) :
+                Dr=fl.Report_read(f_C) ; Keys_p=list(Dr.keys()) ; Nl=len(Dr[Keys_p[0]]) ; Ns=min([Nl,Np]) #; print(Keys_p)
+                key=[ kk for kk in Keys_p if probe in kk ][0]
+                Compo_m[k]=mean(Dr[key][-Ns:])*Coef[k]
+                Compo_d[k]=std( Dr[key][-Ns:])*Coef[k]
+            else :
+                print(util.Col('r',f'=> No report file found for {k} !')) ; Compo_m[k]=0 ; Compo_d[k]=0
             ax_c[0,n].errorbar( [0] , [Compo_m[k]] , yerr=Compo_d[k], marker='o',ecolor='k',color='k')
             ax_c[0,n].set_title(Titre[k],fontsize=16)
             ax_c[0,n].set_xticks([])
@@ -165,9 +170,9 @@ for d in Dirs :
             figr,axr=plt.subplots(figsize=(10,7)) #; bxr=axr.twinx()
             if r_name == 'mass-balance' :
                 (Mf_f,Mf_o,Mf_b,Mf_l,Mf_s,Mb)=fl.Mf_sep2(Dr,Keys) ; Ns=min([len(Mb),Np])
-                M_l=mean(Mf_l[-Ns:]) ; M_c=mean(Mf_f[-Ns:])+mean(Mf_o[-Ns:]) ; Q_l=3600*M_l/fl.Rho0_air ; R_l=100*M_l/M_c
+                M_l=mean(Mf_l[-Ns:]) ; M_c=mean(Mf_f[-Ns:])+mean(Mf_o[-Ns:])+mean(Mf_s[-Ns:]) ; Q_l=3600*M_l/fl.Rho0_air ; R_l=100*M_l/M_c
                 print('=> fuel : %.3f g/s  ,  oxid : %.3f g/s  ,  out : %.3f g/s  ,   leak : %.3f g/s  ,  slope : %.3f g/s  ,  balance : %.3f g/s'%(mean(Mf_f[-Ns:])*1e3,mean(Mf_o[-Ns:])*1e3,mean(Mf_b[-Ns:])*1e3,M_l*1e3,mean(Mf_s[-Ns:])*1e3,mean(Mb[-Ns:])*1e3))
-                print(f'=> Leak : {Q_l:.3f} [Nm3/h]  ,  {R_l:.2f} % Mf+Mo')
+                print(f'=> Leak : {Q_l:.3f} [Nm3/h]  ,  {R_l:.2f} % M tot')
                 axr.plot( Dr['Iteration'],1e3*Mf_f  ,label='inlet-fuel'  )
                 axr.plot( Dr['Iteration'],1e3*Mf_o  ,label='inlet-oxid'  )
                 axr.plot( Dr['Iteration'],1e3*Mf_b  ,label='outlet'      )
@@ -177,7 +182,8 @@ for d in Dirs :
                 axr.plot( Dr['Iteration'],1e3*Mb,'k',label='mass-balance')
                 axr.set_ylabel('Mass flow rate [g/s]',fontsize=25)
                 # figr.legend(fontsize=15,loc='center',bbox_to_anchor=(0.7,0.3))
-                axr.legend(fontsize=15)
+                # axr.legend(fontsize=15,loc='best')
+                axr.legend(fontsize=15,loc='lower right')
                 #======> Detail
                 Ndet=250
                 figd,axd=plt.subplots(ncols=2,figsize=(12,6))
@@ -189,8 +195,8 @@ for d in Dirs :
                 axd[0].plot( Dr['Iteration'][-Ndet:],1e3*Dr['v-in'    ][-Ndet:],label='visse'  )
                 axd[1].set_title('Outlet',fontsize=25)
                 axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['f-out'   ][-Ndet:],label='outlet')
-                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['f-jeu'   ][-Ndet:],label='jeu')
-                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['f-jupe'  ][-Ndet:],label='jupe')
+                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['f-jeu'   ][-Ndet:],label='jeu'   )
+                axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['f-jupe'  ][-Ndet:],label='jupe'  )
                 axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['f-dilute'][-Ndet:],label='dilute')
                 axd[0].set_ylabel('Mass flow rate [g/s]',fontsize=25)
                 axd[0].legend(fontsize=15)

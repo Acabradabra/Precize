@@ -8,25 +8,29 @@ dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/'
 #====================> Atmospheric conditions
 P_atm=101325 # [Pa] Atmospheric pressure
 T_atm=300 # [K] Atmospheric temperature
-# Rho_air=1.17 # [kg/m3] Density of air at atmospheric conditions
-Rho_air=1.15 # [kg/m3] Density of air at atmospheric conditions
+Rho_air=1.17 # [kg/m3] Density of air at atmospheric conditions
+# Rho_air=1.15 # [kg/m3] Density of air at atmospheric conditions
 
 #====================> Darcy
-DP=25 # [Pa] Pressure drop through wall
+DP_leak=5  # [Pa] Pressure drop through wall
+DP_jupe=10 # [Pa] Pressure drop through wall
 L_pyro=0.386
 L_viss=0.456
+L_jupe=0.010
 A_viss=18627 # [mm2] Section visse
 A_pyro=25 # [mm2] Section pyro
 M_leak=0.45*9.5 # [g/s] Target mass flow rate of leaks
-nu=1.4e-4
+M_jupe=50       # [g/s] Target mass flow rate through jupe
+nu=1.85e-5    # Pa.s Dynamic viscosity of air at atmospheric conditions (25d Pa)
+mu=nu/Rho_air # [m2/s] Kinematic viscosity of air at atmospheric conditions (25d Pa)
 
 #====================> Combustion parameters
 Hyb=0.5 # Hybridation (Hydrogen power fraction)
 # Hyb=1 # Hybridation (Hydrogen power fraction)
-# Pow=800 # Power (KW)
+Pow=800 # Power (KW)
 # Pow=100 # Power (KW)
 # Pow=10 # Power (KW)
-Pow=1 # Power (KW)
+# Pow=1 # Power (KW)
 Rep=0.5 # Repartition (Top/Bottom)
 Imp=0.6 # Impulse (Jet/Anular)
 l_gn=0.95 # Excess air ratio Natural gas 
@@ -41,7 +45,7 @@ C3H8=False # Propane in GN
 Q_h=2.5 # [m3/h] Air flow rate for hublo
 
 #====================> Name
-f_param=dir0+f'Set_{Hyb*100:.0f}p-h2_{Pow}kW_V00.tsv'
+f_param=dir0+f'Set_{Hyb*100:.0f}p-h2_{Pow}kW_V01.tsv'
 
 #====================> Geometry
 d_fc=10.22 # [mm] diameter fuel central
@@ -63,12 +67,31 @@ h_dil=102   # [mm] height dilution
 l_dil=430   # [mm] length dilution
 h_jeu=17    # [mm] height jeu
 l_jeu=335   # [mm] length jeu
+s_jb=17600 # [mm2] section jupe-bot
+p_jb=3520 # [mm] perimeter jupe-bot
+
+#====================> Convection
+h_wb=1000 # [W/(m2 K)] Heat transfer coefficient wall-bec
+h_nat=10 # [W/(m2 K)] Heat transfer coefficient Natural convection
+h_col=20 # [W/(m2 K)] Heat transfer coefficient Natural convection
+
+#====================> Radiation
+e_refract=0.85 # Emissivity refractaire
+e_shell=0.80 # Emissivity shell
+e_ss304=0.3 # Emissivity stainless steel 304L
 
 #====================> Klinker parameters
-mdot=5 # [T/j] production klinker
-
-y_alooh_feed=0.3400
-y_caco3_feed=0.5200
-y_humid_feed=0.0075
-y_h2o_alooh=0.150156
-y_co2_caco3=0.439712
+mdot_kk=6 # [T/j] production klinker
+#=====> Walter
+# y_alooh_feed=0.3400
+# y_caco3_feed=0.5200
+# y_humid_feed=0.0075
+# y_h2o_alooh=0.150156
+# y_co2_caco3=0.439712
+#=====> Report
+y_alooh_feed=0.512
+y_caco3_feed=0.488
+y_h2o_caco3=0.35e-2
+y_h2o_alooh=0.5e-2
+y_h2o_alooh=0.112
+y_co2_caco3=0.426
