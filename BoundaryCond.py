@@ -155,24 +155,22 @@ hd_jeu=2*h_jeu*l_jeu/(h_jeu+l_jeu) # Hydraulic diameter jeu (mm)
 #%%=================================================================================
 #                     Klinker
 #===================================================================================
-y_h2o_feed=(y_h2o_caco3*y_caco3_feed+y_h2o_alooh*y_alooh_feed) # mass fraction of humidity in raw material
-y_co2_feed=(y_co2_caco3*y_caco3_feed                         ) # mass fraction of CO2      in raw material
+y_h2o_feed=(y_humid_caco3*y_caco3_feed+(y_h2o_alooh+y_humid_alooh)*y_alooh_feed) # mass fraction of humidity in raw material
+y_co2_feed=(y_co2_caco3*y_caco3_feed) # mass fraction of CO2      in raw material
 y_kk=1-(y_h2o_feed+y_co2_feed) # mass fraction of klinker in raw material
-mdot_rm=mdot_kk/y_kk # mass flow rate of raw material
+mdot_rm=mdot_kk/y_kk           # mass flow rate of raw material
 
-# mdot_alooh=mdot*y_alooh_feed
-# mdot_caco3=mdot*y_caco3_feed
-# mdot_humid=mdot*y_humid_feed
-
-mdot_h2o=y_h2o_feed*mdot_rm #mdot_alooh*y_h2o_alooh+mdot_humid
-mdot_co2=y_co2_feed*mdot_rm #mdot_caco3*y_co2_caco3
+mdot_h2o=y_h2o_feed*mdot_rm 
+mdot_co2=y_co2_feed*mdot_rm 
 
 mdot_h2o*=(1e3/(3600*24)) # [kg/s]
 mdot_co2*=(1e3/(3600*24)) # [kg/s]
 
-print('\n=> '+util.Col('r','Mass flux from solid [Ks/s] :'))
+print('\n=> '+util.Col('r','Mass flux from solid [Kg/s] :'))
 print(f'=> H2O : {mdot_h2o*fac:.3f} [{unit:s}]  ,  {mdot_h2o*1e3:.3f} [g/s]')
 print(f'=> CO2 : {mdot_co2*fac:.3f} [{unit:s}]  ,  {mdot_co2*1e3:.3f} [g/s]')
+print(f'=> Ratio : {mdot_co2/mdot_h2o:.2f} [-]')
+print(f'=> KK/RM : {100*y_kk:.2f} [%]')
 
 #%%=================================================================================
 #                     Pressure Loss
@@ -220,8 +218,10 @@ if FILE :
     Param["mdot_oxid_staged"      ]=[ f'{MO_bs*fac   :.12e}' , ' [%s]'%(unit) , "mdot_oxid_staged"      , 'mass-flow'                 ]
     Param["mdot_h2o"              ]=[ f'{mdot_h2o*fac:.12e}' , ' [%s]'%(unit) , "mdot_h2o"              , 'mass-flow'                 ]
     Param["mdot_co2"              ]=[ f'{mdot_co2*fac:.12e}' , ' [%s]'%(unit) , "mdot_co2"              , 'mass-flow'                 ]
+    Param["heat_sink"             ]=[ f'{heat_sink   :.6f}'  , ' [kW]'        , "heat_sink"             , ''                          ]
     Param["smdot_h2o"             ]=[ 'mdot_h2o/area_tc'     , ''             , "smdot_h2o"             , ''                          ]
     Param["smdot_co2"             ]=[ 'mdot_co2/area_tc'     , ''             , "smdot_co2"             , ''                          ]
+    Param["sheat_sink"            ]=[ 'heat_sink/area_tc'    , ''             , "sheat_sink"            , ''                          ]
     Param["temp_bath"             ]=[ f'{1723        :.0f}'  , ' [K]'         , "temp_bath"             , 'temperature'               ]
     Param["temp_ext"              ]=[ f'{300         :.0f}'  , ' [K]'         , "temp_ext"              , 'temperature'               ]
     Param["temp_fuel"             ]=[ f'{300         :.0f}'  , ' [K]'         , "temp_fuel"             , 'temperature'               ]

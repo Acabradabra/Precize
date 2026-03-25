@@ -18,26 +18,26 @@ L_pyro=0.386
 L_viss=0.456
 L_jupe=0.010
 A_viss=18627 # [mm2] Section visse
-A_pyro=25 # [mm2] Section pyro
+A_pyro=25    # [mm2] Section pyro
 M_leak=0.45*9.5 # [g/s] Target mass flow rate of leaks
 M_jupe=50       # [g/s] Target mass flow rate through jupe
 nu=1.85e-5    # Pa.s Dynamic viscosity of air at atmospheric conditions (25d Pa)
 mu=nu/Rho_air # [m2/s] Kinematic viscosity of air at atmospheric conditions (25d Pa)
 
 #====================> Combustion parameters
-Hyb=0.5 # Hybridation (Hydrogen power fraction)
-# Hyb=1 # Hybridation (Hydrogen power fraction)
-Pow=800 # Power (KW)
-# Pow=100 # Power (KW)
-# Pow=10 # Power (KW)
-# Pow=1 # Power (KW)
-Rep=0.5 # Repartition (Top/Bottom)
+Hyb=1 # Hybridation (Hydrogen power fraction)
 Imp=0.6 # Impulse (Jet/Anular)
-l_gn=0.95 # Excess air ratio Natural gas 
-# l_gn=1    # Excess air ratio Natural gas 
-l_h2=1    # Excess air ratio Hydrogen
-# Rb_o=0.38 # Repartition bottom oxygen (central)
-Rb_o=0.15 # Repartition bottom oxygen (central)
+Pow=800 # Power (KW)
+if Hyb==1 :
+    Rep=0 # Repartition (Top/Bottom)
+    l_gn=1    # Excess air ratio Natural gas 
+    l_h2=1    # Excess air ratio Hydrogen
+    Rb_o=0.15 # Repartition bottom oxygen (central)
+elif Hyb==0.5 :
+     Rep=0.5 # Repartition (Top/Bottom)
+     l_gn=0.95 # Excess air ratio Natural gas 
+     l_h2=1    # Excess air ratio Hydrogen
+     Rb_o=0.38 # Repartition bottom oxygen (central)
 
 N2  =False # Nitrogen in GN
 C3H8=False # Propane in GN
@@ -45,7 +45,7 @@ C3H8=False # Propane in GN
 Q_h=2.5 # [m3/h] Air flow rate for hublo
 
 #====================> Name
-f_param=dir0+f'Set_{Hyb*100:.0f}p-h2_{Pow}kW_V01.tsv'
+f_param=dir0+f'Set_{Hyb*100:.0f}ph2_{Pow*Rep:.0f}kWt_{Pow*(1-Rep):.0f}kWb_{l_gn*100:.0f}lgn_{l_h2*100:.0f}lh2_V01.tsv'
 
 #====================> Geometry
 d_fc=10.22 # [mm] diameter fuel central
@@ -88,10 +88,12 @@ mdot_kk=6 # [T/j] production klinker
 # y_humid_feed=0.0075
 # y_h2o_alooh=0.150156
 # y_co2_caco3=0.439712
-#=====> Report
+#=====> New
 y_alooh_feed=0.512
 y_caco3_feed=0.488
-y_h2o_caco3=0.35e-2
-y_h2o_alooh=0.5e-2
+y_humid_caco3=0.35e-2
+y_humid_alooh=0.5e-2
 y_h2o_alooh=0.112
 y_co2_caco3=0.426
+#=====> heat loss
+heat_sink=-187.030729

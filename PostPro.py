@@ -13,8 +13,8 @@
 #                     Modules
 #===================================================================================
 import Utilities as util
-(Sysa,NSysa,Arg)=util.Parseur(['Temp','Compo','Report','Visu'],0,'Arg : ')
-(                             [ TEMP , COMPO , REPORT , VISU ])=Arg
+(Sysa,NSysa,Arg)=util.Parseur(['Temp','Compo','Report','Visu',],0,'Arg : ')
+(                             [ TEMP , COMPO , REPORT , VISU ,])=Arg
 
 from numpy import *
 import os
@@ -32,12 +32,25 @@ t0=time.time()
 Np=int(1e3)
 
 # dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/Walter-50pH2-60pJet/'
+# dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M00/'
 dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/'
+# dir0='/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/'
 Dirs=[
 dir0+'DUMP/'
 # dir0+'DUMP-10-Ignit/',
 # dir0+'DUMP-11-800kW/'
 ]
+
+#===============> Param Visualisation
+# Vars=['Vel','k','T','o2','h2','ch4','co2','h2o','co']
+Keys=['T']
+Planes={'T':'Data-F-x0.dat'  }
+Vars  ={'T':'temperature'    }
+Titres={'T':'Temperature [K]'}
+RX    ={'T':[]               }
+RY    ={'T':[]               }
+Ticks ={'T':[]               }
+cmesh=0 
 
 #===============> Param temperature
 Pos_V=[0.51,2.17,3.098] # Voute thermocouples positions (m)
@@ -48,7 +61,8 @@ DevT=[]
 
 #===============> Param composition
 # dil=0.45 # dilution Mf_leak/Mf_tot
-dil=0.20 # dilution Mf_leak/Mf_tot
+# dil=0.20 # dilution Mf_leak/Mf_tot
+dil=0 # dilution Mf_leak/Mf_tot
 Rfiles={
     'O2' : 'report-o2-rfile.out',
     'CO' : 'report-co-rfile.out',
@@ -73,38 +87,40 @@ Tu=300 # Ambient temperature (K)
 #%%=================================================================================
 #                     Process
 #===================================================================================
-KeysT0=[
-    'report-meta-temperature(sample_1_vol)',
-    'report-meta-temperature(sample_2_vol)',
-    'report-meta-temperature(sample_3_vol)',
-    'report-meta-temperature(sample_a_vol)',
-    'report-meta-temperature(sample_c_vol)',
-    'report-meta-temperature(sample_d_vol)',
-    'report-meta-temperature(sample_e_vol)',
-]
-KeysT1=[
-    'report-temperature(sample_1_vol)',
-    'report-temperature(sample_2_vol)',
-    'report-temperature(sample_3_vol)',
-    'report-temperature(sample_a_vol)',
-    'report-temperature(sample_c_vol)',
-    'report-temperature(sample_d_vol)',
-    'report-temperature(sample_e_vol)',
-]
+# KeysT0=[
+#     'report-meta-temperature(sample_1_vol)',
+#     'report-meta-temperature(sample_2_vol)',
+#     'report-meta-temperature(sample_3_vol)',
+#     'report-meta-temperature(sample_a_vol)',
+#     'report-meta-temperature(sample_c_vol)',
+#     'report-meta-temperature(sample_d_vol)',
+#     'report-meta-temperature(sample_e_vol)',
+# ]
+# KeysT1=[
+#     'report-temperature(sample_1_vol)',
+#     'report-temperature(sample_2_vol)',
+#     'report-temperature(sample_3_vol)',
+#     'report-temperature(sample_a_vol)',
+#     'report-temperature(sample_c_vol)',
+#     'report-temperature(sample_d_vol)',
+#     'report-temperature(sample_e_vol)',
+# ]
 T_dil=[]
 for d in Dirs :
     print('=> '+d) ; dirp=d+'PLOT/'
     if TEMP : #===========================================================================> Temperature
-        if os.path.exists(d+'report-meta-temperature-rfile.out') : KeysT=KeysT0 ; f0=d+'report-meta' #-temperature-rfile.out'
-        elif os.path.exists(d+'report-temperature-rfile.out')    : KeysT=KeysT1 ; f0=d+'report' #-temperature-rfile.out'
-        else : raise FileNotFoundError('No temperature rfile found !')
-        Dr=fl.Report_read(f0+'-temperature-rfile.out') ; Keys=list(Dr.keys()) ; Nl=len(Dr[Keys[0]]) ; Ns=min([Nl,Np])
-        MoyT.append([ mean(Dr[k][-Ns:]) for k in KeysT ]) ; Tb=float(MoyT[-1][-1]) ; print(f'=> Mean burned temperature : {Tb:.2f} [K]')
+        # if os.path.exists(d+'report-meta-temperature-rfile.out') : KeysT=KeysT0 ; f0=d+'report-meta' #-temperature-rfile.out'
+        # elif os.path.exists(d+'report-temperature-rfile.out')    : KeysT=KeysT1 ; f0=d+'report' #-temperature-rfile.out'
+        # else : raise FileNotFoundError('No temperature rfile found !')
+        f0=d+'report'
+        Dr=fl.Report_read(f0+'-temperature-rfile.out') ; Keys=list(Dr.keys()) ; Nl=len(Dr[Keys[0]]) ; Ns=min([Nl,Np]) ; KeysT=Keys
+        Id_v=[ KeysT.index(k) for k in ["p3","p2","p1"] ]
+        MoyT.append([ mean(Dr[k][-Ns:]) for k in KeysT ]) ; Tb=float(MoyT[-1][-2]) ; print(f'=> Mean burned temperature : {Tb:.2f} [K]')
         DevT.append([ std( Dr[k][-Ns:]) for k in KeysT ])
         Dq=fl.Report_read(d+'report-heat-release-rfile.out') ; Keys=list(Dq.keys())
         Hr=mean(Dq[Keys[1]][-Ns:]) ; print(f'=> Mean heat release rate : {Hr:.2f} W/m3')
         Dm=fl.Report_read(d+'report-mass-balance-rfile.out') ; Keys=list(Dm.keys())
-        (Mf_f,Mf_o,Mf_b,Mf_s,Mb)=fl.Mf_sep(Dm,Keys) ; Md=mean(Mf_b[-Ns:])
+        (Mf_f,Mf_o,Mf_b,Mf_l,Mf_s,Mb)=fl.Mf_sep2(Dm,Keys) ; Ns=min([len(Mb),Np]) ; Md=mean(Mf_b[-Ns:])
         Cp=-Hr/(Md*(Tb-Tu)) ; print(f'=> Estimated Cp : {Cp:.2f} J/Kg/K')
         Tb2=Tu-Hr/((1+dil)*Md*Cp) ; print(f'=> Estimated Tb (with dilution {dil*1e2:.0f} %) : {Tb2:.2f} [K]')
         T_dil.append(Tb2)
@@ -131,7 +147,7 @@ for d in Dirs :
         for n,k in enumerate(Keys_s[:-1]) : #=====> Dry
             ax_c[1,n].errorbar( [0] , [X_d[k]] , yerr=Compo_d[k]/C_dry, marker='o',ecolor='k',color='k')
             ax_c[1,n].set_xticks([])
-        print(f"=> Dry composition : O2 {X_d['O2']:.2f} [%]  ,  CO {X_d['CO']:.0f} [ppm]  ,  CO2 {X_d['CO2']:.2f} [%]")
+        print(util.Col('b',f"=> Dry composition : O2 {X_d['O2']:.2f} [%]  ,  CO {X_d['CO']:.0f} [ppm]  ,  CO2 {X_d['CO2']:.2f} [%]"))
         #====================> Dilution
         XO2_a,XN2_a=0.21,0.79
         Wa=XO2_a*32+XN2_a*28
@@ -170,14 +186,22 @@ for d in Dirs :
             figr,axr=plt.subplots(figsize=(10,7)) #; bxr=axr.twinx()
             if r_name == 'mass-balance' :
                 (Mf_f,Mf_o,Mf_b,Mf_l,Mf_s,Mb)=fl.Mf_sep2(Dr,Keys) ; Ns=min([len(Mb),Np])
-                M_l=mean(Mf_l[-Ns:]) ; M_c=mean(Mf_f[-Ns:])+mean(Mf_o[-Ns:])+mean(Mf_s[-Ns:]) ; Q_l=3600*M_l/fl.Rho0_air ; R_l=100*M_l/M_c
-                print('=> fuel : %.3f g/s  ,  oxid : %.3f g/s  ,  out : %.3f g/s  ,   leak : %.3f g/s  ,  slope : %.3f g/s  ,  balance : %.3f g/s'%(mean(Mf_f[-Ns:])*1e3,mean(Mf_o[-Ns:])*1e3,mean(Mf_b[-Ns:])*1e3,M_l*1e3,mean(Mf_s[-Ns:])*1e3,mean(Mb[-Ns:])*1e3))
+                Ma_f=mean(Mf_f[-Ns:])
+                Ma_o=mean(Mf_o[-Ns:])
+                Ma_b=mean(Mf_b[-Ns:])
+                Ma_l=mean(Mf_l[-Ns:])
+                Ma_s=mean(Mf_s[-Ns:])
+                Mbal=mean(  Mb[-Ns:])
+                Ma_t=Ma_f+Ma_o+Ma_s
+                Q_l=3600*Ma_l/fl.Rho0_air ; R_l=100*Ma_l/Ma_t
+                print(f'=> fuel : {Ma_f*1e3:.3f} g/s  ,  oxid : {Ma_o*1e3:.3f} g/s  ,  out : {Ma_b*1e3:.3f} g/s  ,   leak : {Ma_l*1e3:.3f} g/s  ,  slope : {Ma_s*1e3:.3f} g/s  ,  balance : {Mbal*1e3:.3f} g/s')
                 print(f'=> Leak : {Q_l:.3f} [Nm3/h]  ,  {R_l:.2f} % M tot')
+                print(f'=> Balance : {-100*Mbal/Ma_t:.2f} [%] O2 + fuel + slope')
                 axr.plot( Dr['Iteration'],1e3*Mf_f  ,label='inlet-fuel'  )
                 axr.plot( Dr['Iteration'],1e3*Mf_o  ,label='inlet-oxid'  )
                 axr.plot( Dr['Iteration'],1e3*Mf_b  ,label='outlet'      )
-                axr.plot( Dr['Iteration'],1e3*Mf_l  ,label='leak'        )			
-                axr.plot( Dr['Iteration'],1e3*Mf_s  ,label='slope-zone'  )			
+                axr.plot( Dr['Iteration'],1e3*Mf_l  ,label='leak'        )
+                axr.plot( Dr['Iteration'],1e3*Mf_s  ,label='slope-zone'  )
                 # bxr.plot( Dr['Iteration'],1e3*Mb,'k',label='mass-balance')
                 axr.plot( Dr['Iteration'],1e3*Mb,'k',label='mass-balance')
                 axr.set_ylabel('Mass flow rate [g/s]',fontsize=25)
@@ -202,6 +226,14 @@ for d in Dirs :
                 axd[0].legend(fontsize=15)
                 axd[1].legend(fontsize=15)
                 util.SaveFig(figd,dirp+'MassFlow-Details.pdf')
+            elif r_name == 'heat-release' :
+                for n,k in enumerate(Keys[1:]) : 
+                    if 'fluides-fluide' in k :
+                        axr.plot( Dr['Iteration'],Dr[k],label=Labels[n+1] )
+            elif r_name == 'heat-loss' :
+                for n,k in enumerate(Keys[1:]) : 
+                        axr.plot( Dr['Iteration'][100:],Dr[k][100:],label=Labels[n+1] )
+                if len(Keys)>2 : axr.legend(fontsize=15) #,loc='center',bbox_to_anchor=(0.7,0.3))
             else :
                 for n,k in enumerate(Keys[1:]) : axr.plot( Dr['Iteration'],Dr[k],label=Labels[n+1] )
                 if len(Keys)>2 : axr.legend(fontsize=15) #,loc='center',bbox_to_anchor=(0.7,0.3))
@@ -209,6 +241,10 @@ for d in Dirs :
             if r_name in ['heat-release','mass-balance','shell-loss','co2'] :
                 axr.ticklabel_format( axis='y' , scilimits=(-3,3) )
             util.SaveFig(figr,dirp+'Report-%s.pdf'%(r_name))
+    if VISU : #===========================================================================> Report
+        F_int={}
+        for k in Vars :
+            F_int[k]=fl.Visu(d+'DATA/'+Planes[k],Vars[k],Titres[k],RX[k],RY[k],Ticks[k],cmesh,BD_Vars['T']  ,fsize,'inferno',dirp+name0+'Temperature.png',['INTERP','LINES',Vp_s,'ISO',Tiso]+Param['T']  )
 
 MoyT=array(MoyT)
 DevT=array(DevT)
@@ -221,12 +257,13 @@ if TEMP :
     fig_C,ax_C=plt.subplots(figsize=(8,6)) #=====> Chimney
     labels=[ d.split('/')[-2].split('-')[-1] for d in Dirs ] ; Nl=len(labels)
     for i,l in enumerate(labels) :
-        ax_C.plot([i,i], [T_exp[ -1],MoyT[i,-1]],'k:',alpha=0.3)
-        ax_C.plot([i],T_dil[i],'ko')
-        Er=100*abs(MoyT[i,-1]-T_exp[ -1])/T_exp[ -1]
+        Tchem=MoyT[i,-2]
+        ax_C.plot([i,i],[T_exp[-1],Tchem],'k:',alpha=0.3)
+        ax_C.plot([i  ],T_dil[i],'ko')
+        Er=100*abs(Tchem-T_exp[ -1])/T_exp[ -1]
         ax_C.text(i+0.1,T_exp[ -1]+50,f'{Er:.1f} %',fontsize=12,color='k')
-        ax_V.errorbar(Pos_V,MoyT[i,:3],yerr=DevT[i,:3],marker='o',label=l)
-        ax_C.errorbar(i    ,MoyT[i,-1],yerr=DevT[i,-1],marker='o',label=l)
+        ax_V.errorbar(Pos_V,MoyT[i,Id_v],yerr=DevT[i,Id_v],marker='o',label=l)
+        ax_C.errorbar(i    ,Tchem       ,yerr=DevT[i,-1  ],marker='o',label=l)
     ax_V.plot(Pos_V ,   T_exp[:-1] ,'k-o',label='Pilote')
     ax_C.plot(   Nl ,   T_exp[ -1] ,'k-o',label='Pilote')
     ax_C.plot([0,Nl],2*[T_exp[ -1]],'k--')
@@ -244,5 +281,5 @@ if TEMP :
     ax_C.set_xticklabels(labels+['Pilote'],fontsize=14)
     fig_V.subplots_adjust(right=0.5)
 
-    util.SaveFig(fig_V,'Plot/T-Voute.pdf')
-    util.SaveFig(fig_C,'Plot/T-Chemine.pdf')
+    util.SaveFig(fig_V,dir0+'PLOT/T-Voute.pdf')
+    util.SaveFig(fig_C,dir0+'PLOT/T-Chemine.pdf')
