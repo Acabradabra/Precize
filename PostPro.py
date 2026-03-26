@@ -55,7 +55,8 @@ cmesh=0
 #===============> Param temperature
 Pos_V=[0.51,2.17,3.098] # Voute thermocouples positions (m)
 # T_exp=array([1214,1390,1123 , 1210])+273.15 # Pilot temperatures (K) 
-T_exp=array([1159.1,1351,1110.8 , 1170.2])+273.15 # Pilot temperatures (K) 
+# T_exp=array([1159.1,1351,1110.8 , 1170.2])+273.15 # Pilot temperatures (K) 
+T_exp=array([1150,1400,1150 , 1350])+273.15 # Pilot temperatures (K) 
 MoyT=[]
 DevT=[]
 
@@ -87,31 +88,10 @@ Tu=300 # Ambient temperature (K)
 #%%=================================================================================
 #                     Process
 #===================================================================================
-# KeysT0=[
-#     'report-meta-temperature(sample_1_vol)',
-#     'report-meta-temperature(sample_2_vol)',
-#     'report-meta-temperature(sample_3_vol)',
-#     'report-meta-temperature(sample_a_vol)',
-#     'report-meta-temperature(sample_c_vol)',
-#     'report-meta-temperature(sample_d_vol)',
-#     'report-meta-temperature(sample_e_vol)',
-# ]
-# KeysT1=[
-#     'report-temperature(sample_1_vol)',
-#     'report-temperature(sample_2_vol)',
-#     'report-temperature(sample_3_vol)',
-#     'report-temperature(sample_a_vol)',
-#     'report-temperature(sample_c_vol)',
-#     'report-temperature(sample_d_vol)',
-#     'report-temperature(sample_e_vol)',
-# ]
 T_dil=[]
 for d in Dirs :
     print('=> '+d) ; dirp=d+'PLOT/'
     if TEMP : #===========================================================================> Temperature
-        # if os.path.exists(d+'report-meta-temperature-rfile.out') : KeysT=KeysT0 ; f0=d+'report-meta' #-temperature-rfile.out'
-        # elif os.path.exists(d+'report-temperature-rfile.out')    : KeysT=KeysT1 ; f0=d+'report' #-temperature-rfile.out'
-        # else : raise FileNotFoundError('No temperature rfile found !')
         f0=d+'report'
         Dr=fl.Report_read(f0+'-temperature-rfile.out') ; Keys=list(Dr.keys()) ; Nl=len(Dr[Keys[0]]) ; Ns=min([Nl,Np]) ; KeysT=Keys
         Id_v=[ KeysT.index(k) for k in ["p3","p2","p1"] ]
@@ -230,10 +210,10 @@ for d in Dirs :
                 for n,k in enumerate(Keys[1:]) : 
                     if 'fluides-fluide' in k :
                         axr.plot( Dr['Iteration'],Dr[k],label=Labels[n+1] )
-            elif r_name == 'heat-loss' :
-                for n,k in enumerate(Keys[1:]) : 
-                        axr.plot( Dr['Iteration'][100:],Dr[k][100:],label=Labels[n+1] )
-                if len(Keys)>2 : axr.legend(fontsize=15) #,loc='center',bbox_to_anchor=(0.7,0.3))
+            # elif r_name == 'heat-loss' :
+            #     for n,k in enumerate(Keys[1:]) : 
+            #             axr.plot( Dr['Iteration'][100:],Dr[k][100:],label=Labels[n+1] )
+            #     if len(Keys)>2 : axr.legend(fontsize=15) #,loc='center',bbox_to_anchor=(0.7,0.3))
             else :
                 for n,k in enumerate(Keys[1:]) : axr.plot( Dr['Iteration'],Dr[k],label=Labels[n+1] )
                 if len(Keys)>2 : axr.legend(fontsize=15) #,loc='center',bbox_to_anchor=(0.7,0.3))
@@ -259,7 +239,7 @@ if TEMP :
     for i,l in enumerate(labels) :
         Tchem=MoyT[i,-2]
         ax_C.plot([i,i],[T_exp[-1],Tchem],'k:',alpha=0.3)
-        ax_C.plot([i  ],T_dil[i],'ko')
+        ax_C.plot([i  ], T_dil[i],'ko')
         Er=100*abs(Tchem-T_exp[ -1])/T_exp[ -1]
         ax_C.text(i+0.1,T_exp[ -1]+50,f'{Er:.1f} %',fontsize=12,color='k')
         ax_V.errorbar(Pos_V,MoyT[i,Id_v],yerr=DevT[i,Id_v],marker='o',label=l)
@@ -281,5 +261,7 @@ if TEMP :
     ax_C.set_xticklabels(labels+['Pilote'],fontsize=14)
     fig_V.subplots_adjust(right=0.5)
 
-    util.SaveFig(fig_V,dir0+'PLOT/T-Voute.pdf')
-    util.SaveFig(fig_C,dir0+'PLOT/T-Chemine.pdf')
+    if len(Dirs)>1 : d_compa=dir0
+    else           : d_compa=Dirs[0]
+    util.SaveFig(fig_V,d_compa+'PLOT/T-Voute.pdf')
+    util.SaveFig(fig_C,d_compa+'PLOT/T-Chemine.pdf')

@@ -4,6 +4,7 @@
 #====================> Files
 # dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M00/'
 dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/'
+Vs='V02'
 
 #====================> Atmospheric conditions
 P_atm=101325 # [Pa] Atmospheric pressure
@@ -45,7 +46,7 @@ C3H8=False # Propane in GN
 Q_h=2.5 # [m3/h] Air flow rate for hublo
 
 #====================> Name
-f_param=dir0+f'Set_{Hyb*100:.0f}ph2_{Pow*Rep:.0f}kWt_{Pow*(1-Rep):.0f}kWb_{l_gn*100:.0f}lgn_{l_h2*100:.0f}lh2_V01.tsv'
+f_param=dir0+f'Set_{Hyb*100:.0f}ph2_{Pow*Rep:.0f}kWt_{Pow*(1-Rep):.0f}kWb_{l_gn*100:.0f}lgn_{l_h2*100:.0f}lh2_{Vs}.tsv'
 
 #====================> Geometry
 d_fc=10.22 # [mm] diameter fuel central
@@ -94,6 +95,12 @@ y_caco3_feed=0.488
 y_humid_caco3=0.35e-2
 y_humid_alooh=0.5e-2
 y_h2o_alooh=0.112
+y_feo_alooh=0.2323
+y_sio_alooh=0.0427
+y_tio_alooh=0.0283
+y_alo_alooh=0.5668
 y_co2_caco3=0.426
+y_cao_caco3=0.539
 #=====> heat loss
-heat_sink=-187.030729
+# heat_sink=-187.030729
+heat_sink=-292 # [kW]

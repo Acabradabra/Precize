@@ -13,7 +13,7 @@
 #                     Modules
 #===================================================================================
 import Utilities as util
-(Sysa,NSysa,Arg)=util.Parseur(['File'],1,'Arg : Params')
+(Sysa,NSysa,Arg)=util.Parseur(['File'],0,'Arg : Params')
 (                             [ FILE ])=Arg
 
 from numpy import *
@@ -29,7 +29,7 @@ t0=time.time()
 #                     Parameters
 #===================================================================================
 
-param=Sysa[0]
+param='Pilot' #Sysa[0]
 if   'Walter' in param : from ParamWalter   import *
 elif 'Pilot'  in param : from ParamPilotV2  import *
 else                   : raise ValueError('Unknown param file !')
