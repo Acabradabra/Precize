@@ -13,8 +13,8 @@
 #                     Modules
 #===================================================================================
 import Utilities as util
-(Sysa,NSysa,Arg)=util.Parseur(['Temp','Compo','Report','Visu',],0,'Arg : ')
-(                             [ TEMP , COMPO , REPORT , VISU ,])=Arg
+(Sysa,NSysa,Arg)=util.Parseur(['Temp','Compo','Report','Visu','Prof','Voute'],0,'Arg : ')
+(                             [ TEMP , COMPO , REPORT , VISU , PROF , VOUTE ])=Arg
 
 from numpy import *
 import os
@@ -22,6 +22,8 @@ import os
 # import csv
 import time
 import Fluent as fl
+
+import ParamPilotV2 as pp
 
 t0=time.time()
 (plt,mtp)=util.Plot0()
@@ -36,21 +38,29 @@ Np=int(1e3)
 dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/'
 # dir0='/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/'
 Dirs=[
-dir0+'DUMP/'
-# dir0+'DUMP-10-Ignit/',
-# dir0+'DUMP-11-800kW/'
+# dir0+'DUMP/'
+dir0+'DUMP-16-OD2-Walls/'
 ]
 
 #===============> Param Visualisation
 # Vars=['Vel','k','T','o2','h2','ch4','co2','h2o','co']
-Keys=['T']
-Planes={'T':'Data-F-x0.dat'  }
-Vars  ={'T':'temperature'    }
-Titres={'T':'Temperature [K]'}
-RX    ={'T':[]               }
-RY    ={'T':[]               }
-Ticks ={'T':[]               }
-cmesh=0 
+cmesh=1e3 # coef coordinate (0 : no ticks)
+Keys=['Tf']
+Surfs  ={'Tf':'Data-F-x0.dat'  }
+Planes ={'Tf':'yz'             }
+Vars   ={'Tf':'temperature'    }
+Titres ={'Tf':'Temperature [K]'}
+RX     ={'Tf':[]               }
+RY     ={'Tf':[-0.2,2]         }
+Ticks  ={'Tf':[]               }
+BD_Vars={'Tf':[]               }
+Fsizes ={'Tf':(15,7)           }
+Cmaps  ={'Tf':'inferno'        }
+Names  ={'Tf':'Temperature.png'}
+Params ={'Tf':[]               }
+#===============> Param profile
+fprof='Data-F-chem.dat'
+fvout='Data-TOP.dat'
 
 #===============> Param temperature
 Pos_V=[0.51,2.17,3.098] # Voute thermocouples positions (m)
@@ -88,6 +98,8 @@ Tu=300 # Ambient temperature (K)
 #%%=================================================================================
 #                     Process
 #===================================================================================
+if PROF :
+    figP,axP=plt.subplots(figsize=(10,6))
 T_dil=[]
 for d in Dirs :
     print('=> '+d) ; dirp=d+'PLOT/'
@@ -95,10 +107,11 @@ for d in Dirs :
         f0=d+'report'
         Dr=fl.Report_read(f0+'-temperature-rfile.out') ; Keys=list(Dr.keys()) ; Nl=len(Dr[Keys[0]]) ; Ns=min([Nl,Np]) ; KeysT=Keys
         Id_v=[ KeysT.index(k) for k in ["p3","p2","p1"] ]
-        MoyT.append([ mean(Dr[k][-Ns:]) for k in KeysT ]) ; Tb=float(MoyT[-1][-2]) ; print(f'=> Mean burned temperature : {Tb:.2f} [K]')
+        I_out=KeysT.index('zc')
+        MoyT.append([ mean(Dr[k][-Ns:]) for k in KeysT ]) ; Tb=float(MoyT[-1][I_out]) ; print(f'=> Mean burned temperature : {Tb:.0f} [K]')
         DevT.append([ std( Dr[k][-Ns:]) for k in KeysT ])
         Dq=fl.Report_read(d+'report-heat-release-rfile.out') ; Keys=list(Dq.keys())
-        Hr=mean(Dq[Keys[1]][-Ns:]) ; print(f'=> Mean heat release rate : {Hr:.2f} W/m3')
+        Hr=mean(Dq[Keys[1]][-Ns:]) ; print(f'=> Mean heat release : {Hr*1e-3:.0f} [kW]')
         Dm=fl.Report_read(d+'report-mass-balance-rfile.out') ; Keys=list(Dm.keys())
         (Mf_f,Mf_o,Mf_b,Mf_l,Mf_s,Mb)=fl.Mf_sep2(Dm,Keys) ; Ns=min([len(Mb),Np]) ; Md=mean(Mf_b[-Ns:])
         Cp=-Hr/(Md*(Tb-Tu)) ; print(f'=> Estimated Cp : {Cp:.2f} J/Kg/K')
@@ -210,10 +223,40 @@ for d in Dirs :
                 for n,k in enumerate(Keys[1:]) : 
                     if 'fluides-fluide' in k :
                         axr.plot( Dr['Iteration'],Dr[k],label=Labels[n+1] )
-            # elif r_name == 'heat-loss' :
-            #     for n,k in enumerate(Keys[1:]) : 
-            #             axr.plot( Dr['Iteration'][100:],Dr[k][100:],label=Labels[n+1] )
-            #     if len(Keys)>2 : axr.legend(fontsize=15) #,loc='center',bbox_to_anchor=(0.7,0.3))
+            elif r_name == 'heat-loss' :
+                Nskip=20
+                Ns=min([len(Dr['Iteration']),Np])
+                figW,axW=plt.subplots(figsize=(10,7))
+                figW.suptitle('Wall heat losses',fontsize=20)
+                axr.set_ylabel('Heat loss [kW]',fontsize=25)
+                axW.set_ylabel('Heat loss [kW]',fontsize=25)
+                for n,k in enumerate(Keys[1:]) : 
+                        if k not in ['f-ts','f-tt','f-vs'] :
+                            axr.plot( Dr['Iteration'][Nskip:],Dr[k][Nskip:]*1e-3,label=Labels[n+1] )
+                        if k in ['f-tc'] : 
+                            hl_m=mean(Dr[k][-Ns:]) # 
+                            print(f'=> {k} : {hl_m*1e-3:.0f} [kW]  ,  {100*hl_m/(pp.Pow*1e3):.2f} % Pow')
+                        if k in ['f-top','f-side','f-front','f-back'] :
+                            axW.plot( Dr['Iteration'][Nskip:],Dr[k][Nskip:]*1e-3,label=Labels[n+1] )
+                if len(Keys)>2 : 
+                    axr.legend(fontsize=15)
+                    axW.legend(fontsize=15)
+                (hl_walls,hl_talus,hl_wb)=fl.Hl_sep(Dr,Ns)
+                print(f'=> Total wall heat loss : {hl_walls*1e-3:.0f} [kW]  ,  {100*hl_walls/(pp.Pow*1e3):.2f} % Pow')
+                print(f'=> Total talu heat loss : {hl_talus*1e-3:.0f} [kW]  ,  {100*hl_talus/(pp.Pow*1e3):.2f} % Pow')
+                print(f'=> Water boxe heat loss : {hl_wb   *1e-3:.0f} [kW]  ,  {100*hl_wb   /(pp.Pow*1e3):.2f} % Pow')
+                util.SaveFig(figW,dirp+'HeatLoss-Details.pdf')
+            elif r_name == 'temperature' :
+                figE,axE=plt.subplots(figsize=(10,7))
+                figE.suptitle('External wall temperature',fontsize=20)
+                figr.suptitle('Temperature [K]',fontsize=20)
+                for n,k in enumerate(Keys[1:]) : 
+                    if '-2:external' not in k : axr.plot( Dr['Iteration'],Dr[k],label=Labels[n+1] )
+                    else                      : axE.plot( Dr['Iteration'],Dr[k],label=Labels[n+1] )
+                if len(Keys)>2 : 
+                    axr.legend(fontsize=15)
+                    axE.legend(fontsize=15)
+                util.SaveFig(figE,dirp+'T-External.pdf')
             else :
                 for n,k in enumerate(Keys[1:]) : axr.plot( Dr['Iteration'],Dr[k],label=Labels[n+1] )
                 if len(Keys)>2 : axr.legend(fontsize=15) #,loc='center',bbox_to_anchor=(0.7,0.3))
@@ -221,10 +264,14 @@ for d in Dirs :
             if r_name in ['heat-release','mass-balance','shell-loss','co2'] :
                 axr.ticklabel_format( axis='y' , scilimits=(-3,3) )
             util.SaveFig(figr,dirp+'Report-%s.pdf'%(r_name))
-    if VISU : #===========================================================================> Report
+    if VOUTE : #===========================================================================> Voute
+        Data=fl.ReadSurfD(d+'DATA/'+fvout)
+    if PROF : #===========================================================================> profile
+        Data=fl.ReadSurfD(d+'DATA/'+fprof)
+    if VISU : #===========================================================================> Visualisation
         F_int={}
         for k in Vars :
-            F_int[k]=fl.Visu(d+'DATA/'+Planes[k],Vars[k],Titres[k],RX[k],RY[k],Ticks[k],cmesh,BD_Vars['T']  ,fsize,'inferno',dirp+name0+'Temperature.png',['INTERP','LINES',Vp_s,'ISO',Tiso]+Param['T']  )
+            F_int[k]=fl.Visu(d+'DATA/'+Surfs[k],Planes[k],Vars[k],Titres[k],RX[k],RY[k],Ticks[k],cmesh,BD_Vars[k],Fsizes[k],Cmaps[k],dirp+Names[k],Params[k])
 
 MoyT=array(MoyT)
 DevT=array(DevT)
@@ -237,13 +284,13 @@ if TEMP :
     fig_C,ax_C=plt.subplots(figsize=(8,6)) #=====> Chimney
     labels=[ d.split('/')[-2].split('-')[-1] for d in Dirs ] ; Nl=len(labels)
     for i,l in enumerate(labels) :
-        Tchem=MoyT[i,-2]
+        Tchem=MoyT[i,I_out]
         ax_C.plot([i,i],[T_exp[-1],Tchem],'k:',alpha=0.3)
         ax_C.plot([i  ], T_dil[i],'ko')
         Er=100*abs(Tchem-T_exp[ -1])/T_exp[ -1]
         ax_C.text(i+0.1,T_exp[ -1]+50,f'{Er:.1f} %',fontsize=12,color='k')
-        ax_V.errorbar(Pos_V,MoyT[i,Id_v],yerr=DevT[i,Id_v],marker='o',label=l)
-        ax_C.errorbar(i    ,Tchem       ,yerr=DevT[i,-1  ],marker='o',label=l)
+        ax_V.errorbar(Pos_V,MoyT[i,Id_v],yerr=DevT[i,Id_v ],marker='o',label=l)
+        ax_C.errorbar(i    ,Tchem       ,yerr=DevT[i,I_out],marker='o',label=l)
     ax_V.plot(Pos_V ,   T_exp[:-1] ,'k-o',label='Pilote')
     ax_C.plot(   Nl ,   T_exp[ -1] ,'k-o',label='Pilote')
     ax_C.plot([0,Nl],2*[T_exp[ -1]],'k--')

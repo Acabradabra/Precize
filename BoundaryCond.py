@@ -222,7 +222,7 @@ if FILE :
     Param["smdot_h2o"             ]=[ 'mdot_h2o/area_tc'     , ''             , "smdot_h2o"             , ''                          ]
     Param["smdot_co2"             ]=[ 'mdot_co2/area_tc'     , ''             , "smdot_co2"             , ''                          ]
     Param["sheat_sink"            ]=[ 'heat_sink/area_tc'    , ''             , "sheat_sink"            , ''                          ]
-    Param["temp_bath"             ]=[ f'{1723        :.0f}'  , ' [K]'         , "temp_bath"             , 'temperature'               ]
+    Param["temp_bath"             ]=[ f'{Tbath+273.15:.0f}'  , ' [K]'         , "temp_bath"             , 'temperature'               ]
     Param["temp_ext"              ]=[ f'{300         :.0f}'  , ' [K]'         , "temp_ext"              , 'temperature'               ]
     Param["temp_fuel"             ]=[ f'{300         :.0f}'  , ' [K]'         , "temp_fuel"             , 'temperature'               ]
     Param["temp_oxid"             ]=[ f'{300         :.0f}'  , ' [K]'         , "temp_oxid"             , 'temperature'               ]
