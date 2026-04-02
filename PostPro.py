@@ -13,8 +13,9 @@
 #                     Modules
 #===================================================================================
 import Utilities as util
-(Sysa,NSysa,Arg)=util.Parseur(['Temp','Compo','Report','Visu','Prof','Voute'],0,'Arg : ')
-(                             [ TEMP , COMPO , REPORT , VISU , PROF , VOUTE ])=Arg
+(Sysa,NSysa,Arg)=util.Parseur(['Temp','Compo','Report','Visu','Prof','Voute','Dump','All'],0,'Arg : ')
+(                             [ TEMP , COMPO , REPORT , VISU , PROF , VOUTE , DUMP , ALL ])=Arg
+if ALL : TEMP,COMPO,REPORT,VISU,PROF,VOUTE,DUMP=True,True,True,True,True,True,True
 
 from numpy import *
 import os
@@ -33,40 +34,51 @@ t0=time.time()
 
 Np=int(1e3)
 
+#===============> Directories
 # dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/Walter-50pH2-60pJet/'
 # dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M00/'
 dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/'
 # dir0='/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/'
 Dirs=[
-# dir0+'DUMP/'
-dir0+'DUMP-16-OD2-Walls/'
+dir0+'DUMP-18-OD2-Bath/'
 ]
+if DUMP : Dirs=[ dir0+'DUMP/' ]
+if len(Dirs)>1 : d_compa=dir0
+else           : d_compa=Dirs[0]
 
 #===============> Param Visualisation
-# Vars=['Vel','k','T','o2','h2','ch4','co2','h2o','co']
-cmesh=1e3 # coef coordinate (0 : no ticks)
-Keys=['Tf']
-Surfs  ={'Tf':'Data-F-x0.dat'  }
-Planes ={'Tf':'yz'             }
-Vars   ={'Tf':'temperature'    }
-Titres ={'Tf':'Temperature [K]'}
-RX     ={'Tf':[]               }
-RY     ={'Tf':[-0.2,2]         }
-Ticks  ={'Tf':[]               }
-BD_Vars={'Tf':[]               }
-Fsizes ={'Tf':(15,7)           }
-Cmaps  ={'Tf':'inferno'        }
-Names  ={'Tf':'Temperature.png'}
-Params ={'Tf':[]               }
+cmesh=0 # coef coordinate (0 : no ticks)
+# Keys=['Tf','Ttop']
+# Vars=['Ttop','Htop','CO2f']
+Vars=['YCO2f']
+Param_visu={
+'YCO2f':['Data-F-x0.dat','yz','co2'        ,'$Y_{CO_2}$ [-]'  ,[],[-0.2,2],[],cmesh,[]         ,(15,7),'viridis','Four-YCO2.png'       ,[]            ],
+'Tf'   :['Data-F-x0.dat','yz','temperature','Temperature [K]' ,[],[-0.2,2],[],cmesh,[ 290,2500],(15,7),'inferno','Four-Temperature.png',['ISO',[2000]]],
+'Ttop' :['Data-TOP.dat' ,'yx','temperature','Temperature [K]' ,[],[]      ,[],cmesh,[1745,1790],(15,7),'inferno','Top-Temperature.png' ,['INTERP']    ],
+'Htop' :['Data-TOP.dat' ,'yx','heat-flux'  ,'Heat flux [W/m2]',[],[]      ,[],cmesh,[-8e3,-2e3],(15,7),'inferno','Top-HeatFlux.png'    ,['INTERP']    ],
+}
+
+#===============> Param Voute
+dh=25e-3 # [m] Height of thermocouples
+lkk=2.8  # [W/m K] Radex conductivity
+
 #===============> Param profile
 fprof='Data-F-chem.dat'
-fvout='Data-TOP.dat'
+Z_four=[1.344,2.015,2.117,2.572,2.768 , 12.5]
+Ps_top=-pp.Rho_air*9.81*Z_four[-1]
+Param_prof={
+    'T'   :['temperature'   ,'Temperature [K]'     ,[ 600,2000],'Profile-T.pdf' ],
+    'Pt'  :['total-pressure','Total pressure [Pa]' ,[-150,   0],'Profile-Pt.pdf'],
+    'Ps'  :['pressure'      ,'Static pressure [Pa]',[-150,   0],'Profile-Ps.pdf'],
+    'YCO2':['co2'           ,'$Y_{CO_2}$ [-]'      ,[0,0.5],'Profile-YCO2.pdf'],
+}
 
 #===============> Param temperature
 Pos_V=[0.51,2.17,3.098] # Voute thermocouples positions (m)
+# Pos_V=[0.51,1.377,3.098] # Voute thermocouples positions (m)
 # T_exp=array([1214,1390,1123 , 1210])+273.15 # Pilot temperatures (K) 
 # T_exp=array([1159.1,1351,1110.8 , 1170.2])+273.15 # Pilot temperatures (K) 
-T_exp=array([1150,1400,1150 , 1350])+273.15 # Pilot temperatures (K) 
+T_exp=array([ 1150,1400,1150 , 1350 ])+273.15 # Pilot temperatures (K) 
 MoyT=[]
 DevT=[]
 
@@ -82,8 +94,12 @@ Rfiles={
 }
 Coef= {'O2':    1e2 ,'CO':    1e6   ,'CO2': 1e2     ,'H2O':1e2      ,'N2':1e2     }
 Titre={'O2':'O2 [%]','CO':'CO [ppm]','CO2':'CO2 [%]','H2O':'H2O [%]','N2':'N2 [%]'}
-Keys_s=list(Rfiles.keys()) ; Nspe=len(Keys_s)
-Compo_p={'O2':12.1,'CO':254,'CO2':36.25}
+Keys_s=list(Rfiles.keys())+['N2'] ; Nspe=len(Keys_s)+1
+Keys_w=[ 'O2' , 'CO' , 'CO2' , 'N2' , 'H2O' ]
+Keys_d=[ k for k in Keys_s if k!='H2O' ]
+# Compo_p={'O2':12.1,'CO':254,'CO2':36.25}
+# Compo_p={'O2':12,'CO':774,'CO2':38} # 100% H2 L255
+Compo_p={'O2':6,'CO':1894,'CO2':41} # 100% H2 L254
 Compo_p['N2']=100-(Compo_p['O2']+Compo_p['CO']*1e-4+Compo_p['CO2'])
 Compo_m={}
 Compo_d={}
@@ -98,8 +114,27 @@ Tu=300 # Ambient temperature (K)
 #%%=================================================================================
 #                     Process
 #===================================================================================
+if VOUTE :
+    if 'Ttop' not in Vars : Vars.append('Ttop')
+    if 'Htop' not in Vars : Vars.append('Htop')
+    figV,axV=plt.subplots(figsize=(10,6)) #; bxV=axV.twinx()
+    figV.suptitle('Voute : Temperature and Heat flux',fontsize=20)
+    axV.set_xlabel('Y position [m]',fontsize=16)
+    axV.plot(Pos_V,T_exp[:3],'og',label='Pilot')
+#===================================================================================
 if PROF :
-    figP,axP=plt.subplots(figsize=(10,6))
+    FIG_P,AX_P={},{}
+    for k in Param_prof.keys() :
+        figP,axP=plt.subplots(figsize=(10,6))
+        figP.suptitle('Vertical profile through chimney',fontsize=20)
+        axP.set_xlabel('Z position [m]',fontsize=16)
+        axP.set_ylabel(Param_prof[k][1],fontsize=16)
+        axP.set_ylim(Param_prof[k][2])
+        for z in Z_four[:-1] : axP.plot( 2*[z],Param_prof[k][2],':k')
+        FIG_P[k]=figP ; AX_P[k]=axP
+    AX_P['Pt'].plot([0,Z_four[-1]],[0,Ps_top],'k' )
+    AX_P['Ps'].plot([0,Z_four[-1]],[0,Ps_top],'k' )
+#===================================================================================
 T_dil=[]
 for d in Dirs :
     print('=> '+d) ; dirp=d+'PLOT/'
@@ -118,11 +153,12 @@ for d in Dirs :
         Tb2=Tu-Hr/((1+dil)*Md*Cp) ; print(f'=> Estimated Tb (with dilution {dil*1e2:.0f} %) : {Tb2:.2f} [K]')
         T_dil.append(Tb2)
     if COMPO : #===========================================================================> Composition
-        fig_c,ax_c=plt.subplots(figsize=(8,6),ncols=Nspe,nrows=2)
-        fig_d,ax_d=plt.subplots(figsize=(8,6),ncols=Nspe)
+        fig_c,ax_c=plt.subplots(figsize=(10,6),ncols=Nspe-1,nrows=2)
+        fig_d,ax_d=plt.subplots(figsize=( 8,6),ncols=Nspe-2)
         fig_c.suptitle('Molar fractions (%s)'%(probe),fontsize=20)
+        # fig_d.suptitle(f'Dry molar fraction ({'\033[31m'}Simu{'\033[0m'}Pilot) : {dil*1e2:.0f} % diluted',fontsize=20)
         fig_d.suptitle(f'Dry molar fraction : {dil*1e2:.0f} % diluted',fontsize=20)
-        for n,k in enumerate(Keys_s) : #=====> Wet
+        for n,k in enumerate(Rfiles) : #=====> Wet
             f_C=d+Rfiles[k]
             if os.path.exists(f_C) :
                 Dr=fl.Report_read(f_C) ; Keys_p=list(Dr.keys()) ; Nl=len(Dr[Keys_p[0]]) ; Ns=min([Nl,Np]) #; print(Keys_p)
@@ -131,13 +167,16 @@ for d in Dirs :
                 Compo_d[k]=std( Dr[key][-Ns:])*Coef[k]
             else :
                 print(util.Col('r',f'=> No report file found for {k} !')) ; Compo_m[k]=0 ; Compo_d[k]=0
+        Compo_m['N2']=(1-(Compo_m['O2']/Coef['O2']+Compo_m['CO']/Coef['CO']+Compo_m['CO2']/Coef['CO2']+Compo_m['H2O']/Coef['H2O']))*Coef['N2']
+        Compo_d['N2']=mean([ Compo_d[k]/Coef[k] for k in Keys_s[:-1] ])*Coef['N2']
+        for n,k in enumerate(Keys_w) :
             ax_c[0,n].errorbar( [0] , [Compo_m[k]] , yerr=Compo_d[k], marker='o',ecolor='k',color='k')
             ax_c[0,n].set_title(Titre[k],fontsize=16)
             ax_c[0,n].set_xticks([])
-        print(f"=> Wet composition : O2 {Compo_m['O2']:.2f} [%]  ,  CO {Compo_m['CO']:.0f} [ppm]  ,  CO2 {Compo_m['CO2']:.2f} [%]  ,  H2O {Compo_m['H2O']:.2f} [%]")
+        print(f"=> Wet composition : O2 {Compo_m['O2']:.2f} [%]  ,  CO {Compo_m['CO']:.0f} [ppm]  ,  CO2 {Compo_m['CO2']:.2f} [%]  ,  H2O {Compo_m['H2O']:.2f} [%]  ,  N2 {Compo_m['N2']:.2f} [%]")
         C_dry=1-Compo_m['H2O']/Coef['H2O']
-        X_d={ k:Compo_m[k]/C_dry for k in Keys_s[:-1] }
-        for n,k in enumerate(Keys_s[:-1]) : #=====> Dry
+        X_d={ k:Compo_m[k]/C_dry for k in Keys_s }
+        for n,k in enumerate(Keys_d) : #=====> Dry
             ax_c[1,n].errorbar( [0] , [X_d[k]] , yerr=Compo_d[k]/C_dry, marker='o',ecolor='k',color='k')
             ax_c[1,n].set_xticks([])
         print(util.Col('b',f"=> Dry composition : O2 {X_d['O2']:.2f} [%]  ,  CO {X_d['CO']:.0f} [ppm]  ,  CO2 {X_d['CO2']:.2f} [%]"))
@@ -149,12 +188,12 @@ for d in Dirs :
         Ya={ 'O2':XO2_a*fl.Mol_m['O2']/Wa ,'N2':XN2_a*fl.Mol_m['N2']/Wa } #; print('Ya :',sum([Ya[k] for k in Ya.keys()]))
         Yd={ k:Yf[k]/(1+dil) for k in ['CO','CO2','H2O'] }
         Yd['O2']=(Yf['O2']+Ya['O2']*dil)/(1+dil)
-        Yd['N2']=(         Ya['N2']*dil)/(1+dil) #; print('Yd :',sum([Yd[k] for k in Yd.keys()]))
+        Yd['N2']=(Yf['N2']+Ya['N2']*dil)/(1+dil) #; print('Yd :',sum([Yd[k] for k in Yd.keys()]))
         Wy=1/sum([ Yd[k]/fl.Mol_m[k] for k in Yd.keys() ])
         Xd_w={  k:Wy*Yd[k]/fl.Mol_m[k] for k in Yd.keys() }
         C_dry=1-Xd_w['H2O']
         Xd_d={ k:Xd_w[k]/C_dry for k in Xd_w.keys() if k!='H2O' }
-        for n,k in enumerate(Keys_s[:-1]+['N2']) : #=====> Dry + Dilution
+        for n,k in enumerate(Keys_d) : #=====> Dry + Dilution
             E=100*abs(Compo_p[k]-Xd_d[k]*Coef[k])/Compo_p[k]
             ax_d[n].plot(2*[0] , [Compo_p[k],Xd_d[k]*Coef[k]] , ':k')
             ax_d[n].plot(  [0] , [   Xd_d[k]*Coef[k]] , 'or')
@@ -224,7 +263,7 @@ for d in Dirs :
                     if 'fluides-fluide' in k :
                         axr.plot( Dr['Iteration'],Dr[k],label=Labels[n+1] )
             elif r_name == 'heat-loss' :
-                Nskip=20
+                Nskip=0
                 Ns=min([len(Dr['Iteration']),Np])
                 figW,axW=plt.subplots(figsize=(10,7))
                 figW.suptitle('Wall heat losses',fontsize=20)
@@ -235,16 +274,13 @@ for d in Dirs :
                             axr.plot( Dr['Iteration'][Nskip:],Dr[k][Nskip:]*1e-3,label=Labels[n+1] )
                         if k in ['f-tc'] : 
                             hl_m=mean(Dr[k][-Ns:]) # 
-                            print(f'=> {k} : {hl_m*1e-3:.0f} [kW]  ,  {100*hl_m/(pp.Pow*1e3):.2f} % Pow')
+                            # print(f'=> {k} : {hl_m*1e-3:.0f} [kW]  ,  {100*hl_m/(pp.Pow*1e3):.2f} % Pow')
                         if k in ['f-top','f-side','f-front','f-back'] :
                             axW.plot( Dr['Iteration'][Nskip:],Dr[k][Nskip:]*1e-3,label=Labels[n+1] )
                 if len(Keys)>2 : 
                     axr.legend(fontsize=15)
                     axW.legend(fontsize=15)
-                (hl_walls,hl_talus,hl_wb)=fl.Hl_sep(Dr,Ns)
-                print(f'=> Total wall heat loss : {hl_walls*1e-3:.0f} [kW]  ,  {100*hl_walls/(pp.Pow*1e3):.2f} % Pow')
-                print(f'=> Total talu heat loss : {hl_talus*1e-3:.0f} [kW]  ,  {100*hl_talus/(pp.Pow*1e3):.2f} % Pow')
-                print(f'=> Water boxe heat loss : {hl_wb   *1e-3:.0f} [kW]  ,  {100*hl_wb   /(pp.Pow*1e3):.2f} % Pow')
+                (hl_walls,hl_talus,hl_wb,hl_bath)=fl.Hl_sep(Dr,Ns,pp.Pow,Verbose=2)
                 util.SaveFig(figW,dirp+'HeatLoss-Details.pdf')
             elif r_name == 'temperature' :
                 figE,axE=plt.subplots(figsize=(10,7))
@@ -264,14 +300,33 @@ for d in Dirs :
             if r_name in ['heat-release','mass-balance','shell-loss','co2'] :
                 axr.ticklabel_format( axis='y' , scilimits=(-3,3) )
             util.SaveFig(figr,dirp+'Report-%s.pdf'%(r_name))
-    if VOUTE : #===========================================================================> Voute
-        Data=fl.ReadSurfD(d+'DATA/'+fvout)
     if PROF : #===========================================================================> profile
         Data=fl.ReadSurfD(d+'DATA/'+fprof)
+        for k in Param_prof : AX_P[k].plot(Data['z-coordinate'],Data[Param_prof[k][0]])
     if VISU : #===========================================================================> Visualisation
         F_int={}
-        for k in Vars :
-            F_int[k]=fl.Visu(d+'DATA/'+Surfs[k],Planes[k],Vars[k],Titres[k],RX[k],RY[k],Ticks[k],cmesh,BD_Vars[k],Fsizes[k],Cmaps[k],dirp+Names[k],Params[k])
+        for k in Vars : 
+            Param_visu[k][0 ]=d+'DATA/'+Param_visu[k][0 ]
+            Param_visu[k][11]=dirp     +Param_visu[k][11]
+            F_int[k]=fl.Visu(*Param_visu[k])
+    if VOUTE : #===========================================================================> Voute
+        Vy=linspace(0.4,3.7,int(1e3))
+        Vx=0*Vy
+        T_int=F_int['Ttop'](Vy,Vx)
+        H_int=F_int['Htop'](Vy,Vx)
+        Vy2=Vy-Vy[0]
+        T_w1  =T_int+(dh+1e-3)*H_int/lkk
+        T_wall=T_int+ dh      *H_int/lkk
+        T_w2  =T_int+(dh-1e-3)*H_int/lkk
+        # axV.plot(Vy,T_int ,'k')
+        axV.plot(Vy,T_wall,'b')
+        axV.plot(Vy,T_w1  ,':b')
+        axV.plot(Vy,T_w2  ,':b')
+        # bxV.plot(Vy,H_int,'r')
+        util.SaveFig(figV,dirp+'T-Voute-Int.pdf')
+
+if PROF : 
+    for k in Param_prof.keys() : util.SaveFig(FIG_P[k],dirp+Param_prof[k][-1])
 
 MoyT=array(MoyT)
 DevT=array(DevT)
@@ -295,7 +350,7 @@ if TEMP :
     ax_C.plot(   Nl ,   T_exp[ -1] ,'k-o',label='Pilote')
     ax_C.plot([0,Nl],2*[T_exp[ -1]],'k--')
 
-    fig_V.suptitle('Mean Voute Temperature',fontsize=20)
+    fig_V.suptitle('Mean Voute Temperature'  ,fontsize=20)
     fig_C.suptitle('Mean Chimney Temperature',fontsize=20)
     fig_V.legend(title='Case',fontsize=16,loc='lower left',bbox_to_anchor=(0.35,0.12))
     ax_V.set_xlabel('X Position [m]'  ,fontsize=16)
@@ -308,7 +363,5 @@ if TEMP :
     ax_C.set_xticklabels(labels+['Pilote'],fontsize=14)
     fig_V.subplots_adjust(right=0.5)
 
-    if len(Dirs)>1 : d_compa=dir0
-    else           : d_compa=Dirs[0]
     util.SaveFig(fig_V,d_compa+'PLOT/T-Voute.pdf')
     util.SaveFig(fig_C,d_compa+'PLOT/T-Chemine.pdf')
