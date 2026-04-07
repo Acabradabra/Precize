@@ -37,10 +37,12 @@ Np=int(1e3)
 #===============> Directories
 # dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/Walter-50pH2-60pJet/'
 # dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M00/'
-dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/'
+# dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/'
+dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M02/'
 # dir0='/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/'
 Dirs=[
-dir0+'DUMP-18-OD2-Bath/'
+dir0+'DUMP-00-Init/'
+# dir0+'DUMP-18-OD2-Bath/'
 ]
 if DUMP : Dirs=[ dir0+'DUMP/' ]
 if len(Dirs)>1 : d_compa=dir0
@@ -48,15 +50,18 @@ else           : d_compa=Dirs[0]
 
 #===============> Param Visualisation
 cmesh=0 # coef coordinate (0 : no ticks)
-# Keys=['Tf','Ttop']
+Vars=['Tf','YCO2f','YH2Of','Ptf','Psf']
 # Vars=['Ttop','Htop','CO2f']
-Vars=['YCO2f']
 Param_visu={
-'YCO2f':['Data-F-x0.dat','yz','co2'        ,'$Y_{CO_2}$ [-]'  ,[],[-0.2,2],[],cmesh,[]         ,(15,7),'viridis','Four-YCO2.png'       ,[]            ],
-'Tf'   :['Data-F-x0.dat','yz','temperature','Temperature [K]' ,[],[-0.2,2],[],cmesh,[ 290,2500],(15,7),'inferno','Four-Temperature.png',['ISO',[2000]]],
-'Ttop' :['Data-TOP.dat' ,'yx','temperature','Temperature [K]' ,[],[]      ,[],cmesh,[1745,1790],(15,7),'inferno','Top-Temperature.png' ,['INTERP']    ],
-'Htop' :['Data-TOP.dat' ,'yx','heat-flux'  ,'Heat flux [W/m2]',[],[]      ,[],cmesh,[-8e3,-2e3],(15,7),'inferno','Top-HeatFlux.png'    ,['INTERP']    ],
+'YCO2f':['Data-F-x0.dat','yz','co2'           ,'$Y_{CO_2}$ [-]'      ,[],[-0.2,2],[],cmesh,[]         ,(15,7),'viridis','Four-YCO2.png'       ,[]            ],
+'YH2Of':['Data-F-x0.dat','yz','h2o'           ,'$Y_{H_2O}$ [-]'      ,[],[-0.2,2],[],cmesh,[]         ,(15,7),'viridis','Four-YH2O.png'       ,[]            ],
+'Tf'   :['Data-F-x0.dat','yz','temperature'   ,'Temperature [K]'     ,[],[-0.2,2],[],cmesh,[ 290,2500],(15,7),'inferno','Four-Temperature.png',['ISO',[2000,2500]]],
+'Ptf'  :['Data-F-x0.dat','yz','total-pressure','Total pressure [Pa]' ,[],[-0.2,2],[],cmesh,[]         ,(15,7),'cividis','Four-Pt.png'         ,[]            ],
+'Psf'  :['Data-F-x0.dat','yz','pressure'      ,'Static pressure [Pa]',[],[-0.2,2],[],cmesh,[]         ,(15,7),'cividis','Four-Ps.png'         ,[]            ],
+'Ttop' :['Data-TOP.dat' ,'yx','temperature'   ,'Temperature [K]'     ,[],[]      ,[],cmesh,[1745,1790],(15,7),'inferno','Top-Temperature.png' ,['INTERP']    ],
+'Htop' :['Data-TOP.dat' ,'yx','heat-flux'     ,'Heat flux [W/m2]'    ,[],[]      ,[],cmesh,[-8e3,-2e3],(15,7),'inferno','Top-HeatFlux.png'    ,['INTERP']    ],
 }
+# Vars=list(Param_visu.keys())
 
 #===============> Param Voute
 dh=25e-3 # [m] Height of thermocouples
@@ -68,9 +73,9 @@ Z_four=[1.344,2.015,2.117,2.572,2.768 , 12.5]
 Ps_top=-pp.Rho_air*9.81*Z_four[-1]
 Param_prof={
     'T'   :['temperature'   ,'Temperature [K]'     ,[ 600,2000],'Profile-T.pdf' ],
-    'Pt'  :['total-pressure','Total pressure [Pa]' ,[-150,   0],'Profile-Pt.pdf'],
-    'Ps'  :['pressure'      ,'Static pressure [Pa]',[-150,   0],'Profile-Ps.pdf'],
-    'YCO2':['co2'           ,'$Y_{CO_2}$ [-]'      ,[0,0.5],'Profile-YCO2.pdf'],
+    'Pt'  :['total-pressure','Total pressure [Pa]' ,[-150, 100],'Profile-Pt.pdf'],
+    'Ps'  :['pressure'      ,'Static pressure [Pa]',[-200, 100],'Profile-Ps.pdf'],
+    'YCO2':['co2'           ,'$Y_{CO_2}$ [-]'      ,[   0, 0.5],'Profile-YCO2.pdf'],
 }
 
 #===============> Param temperature
@@ -81,6 +86,9 @@ Pos_V=[0.51,2.17,3.098] # Voute thermocouples positions (m)
 T_exp=array([ 1150,1400,1150 , 1350 ])+273.15 # Pilot temperatures (K) 
 MoyT=[]
 DevT=[]
+
+#===============> Param Heat losses
+Nskip=100
 
 #===============> Param composition
 # dil=0.45 # dilution Mf_leak/Mf_tot
@@ -244,11 +252,11 @@ for d in Dirs :
                 Ndet=250
                 figd,axd=plt.subplots(ncols=2,figsize=(12,6))
                 axd[0].set_title('Leaks',fontsize=25)
-                axd[0].plot( Dr['Iteration'][-Ndet:],1e3*Dr['f-bec-in'][-Ndet:],label='bec'    )
-                axd[0].plot( Dr['Iteration'][-Ndet:],1e3*Dr['pa-in'   ][-Ndet:],label='pyro-a' )
-                axd[0].plot( Dr['Iteration'][-Ndet:],1e3*Dr['pc-in'   ][-Ndet:],label='pyro-c' )
-                axd[0].plot( Dr['Iteration'][-Ndet:],1e3*Dr['pd-in'   ][-Ndet:],label='pyro-d' )
-                axd[0].plot( Dr['Iteration'][-Ndet:],1e3*Dr['v-in'    ][-Ndet:],label='visse'  )
+                if 'f-bec-in' in Dr : axd[0].plot( Dr['Iteration'][-Ndet:],1e3*Dr['f-bec-in'][-Ndet:],label='bec'    )
+                if 'pa-in'    in Dr : axd[0].plot( Dr['Iteration'][-Ndet:],1e3*Dr['pa-in'   ][-Ndet:],label='pyro-a' )
+                if 'pc-in'    in Dr : axd[0].plot( Dr['Iteration'][-Ndet:],1e3*Dr['pc-in'   ][-Ndet:],label='pyro-c' )
+                if 'pd-in'    in Dr : axd[0].plot( Dr['Iteration'][-Ndet:],1e3*Dr['pd-in'   ][-Ndet:],label='pyro-d' )
+                if 'v-in'     in Dr : axd[0].plot( Dr['Iteration'][-Ndet:],1e3*Dr['v-in'    ][-Ndet:],label='visse'  )
                 axd[1].set_title('Outlet',fontsize=25)
                 axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['f-out'   ][-Ndet:],label='outlet')
                 axd[1].plot( Dr['Iteration'][-Ndet:],1e3*Dr['f-jeu'   ][-Ndet:],label='jeu'   )
@@ -263,7 +271,6 @@ for d in Dirs :
                     if 'fluides-fluide' in k :
                         axr.plot( Dr['Iteration'],Dr[k],label=Labels[n+1] )
             elif r_name == 'heat-loss' :
-                Nskip=0
                 Ns=min([len(Dr['Iteration']),Np])
                 figW,axW=plt.subplots(figsize=(10,7))
                 figW.suptitle('Wall heat losses',fontsize=20)
@@ -343,7 +350,7 @@ if TEMP :
         ax_C.plot([i,i],[T_exp[-1],Tchem],'k:',alpha=0.3)
         ax_C.plot([i  ], T_dil[i],'ko')
         Er=100*abs(Tchem-T_exp[ -1])/T_exp[ -1]
-        ax_C.text(i+0.1,T_exp[ -1]+50,f'{Er:.1f} %',fontsize=12,color='k')
+        ax_C.text(i+0.1,0.5*(T_exp[ -1]+Tchem),f'{Er:.1f} %',fontsize=12,color='k')
         ax_V.errorbar(Pos_V,MoyT[i,Id_v],yerr=DevT[i,Id_v ],marker='o',label=l)
         ax_C.errorbar(i    ,Tchem       ,yerr=DevT[i,I_out],marker='o',label=l)
     ax_V.plot(Pos_V ,   T_exp[:-1] ,'k-o',label='Pilote')
