@@ -3,8 +3,9 @@
 
 #====================> Files
 # dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M00/'
-dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/'
-Vs='V03'
+# dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/'
+dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M02/'
+Vs='V04'
 
 #====================> Atmospheric conditions
 P_atm=101325 # [Pa] Atmospheric pressure

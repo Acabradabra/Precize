@@ -201,10 +201,10 @@ print(f'=> Permeability jupe : {K_jupe:.3e} [m2]  =>  Visc res : {Rv_jupe:.3e} [
 if FILE :
     print('\n'+util.Col('b','=> Writing : '+f_param))
     Param={}
-    Param["hrr"                   ]=[ 'HeatofReaction/CellVolume' , ''       , "hrr"                   , ''                           ]
-    Param["pstat_ext"             ]=[ '-rho_air*g*Position.z'     , ''       , "pstat_ext"             , 'pressure'                   ]
-    Param["pdyn_ext"              ]=[ 'pstat_ext+DynamicPressure' , ''       , "pdyn_ext"              , 'pressure'                   ]
-    Param["area_tc"               ]=[ "Area(['f-tc'])"            , ''       , "area_tc"               , ''                           ]
+    Param["hrr"                   ]=[ 'HeatofReaction/CellVolume' , ''        , "hrr"                   , ''                          ]
+    Param["ptot_ext"              ]=[ '-rho_air*g*Position.z'     , ''        , "ptot_ext"              , 'pressure'                  ]
+    Param["pstat_ext"             ]=[ 'ptot_ext-DynamicPressure'  , ''        , "pstat_ext"             , 'pressure'                  ]
+    Param["area_tc"               ]=[ "Area(['f-tc'])"            , ''        , "area_tc"               , ''                          ]
     Param["eps_refract"           ]=[ f'{e_refract   :.2f}'  , ''             , "eps_refract"           , ''                          ]
     Param["eps_shell"             ]=[ f'{e_shell     :.2f}'  , ''             , "eps_shell"             , ''                          ]
     Param["eps_ss304"             ]=[ f'{e_ss304     :.2f}'  , ''             , "eps_ss304"             , ''                          ]
