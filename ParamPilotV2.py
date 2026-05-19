@@ -2,10 +2,17 @@
 # -*- coding: utf-8 -*-
 
 #====================> Files
-# dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M00/'
-# dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/'
-dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M02/'
+dfl='/mnt/beegfs/ZEUS/FLUENT/'
+# dir0=dfl+'PRECIZE/Walter-50pH2-60pJet/'
+# dir0=dfl+'PRECIZE/RUN-M00/'
+# dir0=dfl+'PRECIZE/RUN-M01/'
+# dir0=dfl+'PRECIZE/RUN-M02/'
+dir0=dfl+'PRECIZE/RUN-M03/'
 Vs='V04'
+
+#====================> Runs
+Dirs=[
+]
 
 #====================> Atmospheric conditions
 P_atm=101325 # [Pa] Atmospheric pressure
@@ -108,3 +115,38 @@ y_cao_caco3=0.539
 #=====> heat loss
 # heat_sink=-187.030729
 heat_sink=-292 # [kW]
+
+#===============> Param Visualisation
+cmesh=0 # coef coordinate (0 : no ticks)
+# cmesh=1e2 # coef coordinate (0 : no ticks)
+Vars=['Vcol','Tcol']
+Param_visu={
+'Tcol' :['Data-F-yc.dat','xz','temperature'       ,'Temperature [K]'     ,[-0.3,0.3],[2,4]   ,[],cmesh,[]         ,(5,9) ,'inferno','Col-Temperature.png' ,['ISO',[1800]]],
+'Vcol' :['Data-F-yc.dat','xz','velocity-magnitude','Velocity [m/s]'      ,[-0.3,0.3],[2,3]   ,[],cmesh,[]         ,(7,9) ,'cividis','Col-Velocity.png'    ,['QUIV',[2e-2,2e-2,300]]],
+'YCO2f':['Data-F-x0.dat','yz','co2'               ,'$Y_{CO_2}$ [-]'      ,[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'viridis','Four-YCO2.png'       ,[]            ],
+'YH2Of':['Data-F-x0.dat','yz','h2o'               ,'$Y_{H_2O}$ [-]'      ,[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'viridis','Four-YH2O.png'       ,[]            ],
+'Tf'   :['Data-F-x0.dat','yz','temperature'       ,'Temperature [K]'     ,[]        ,[-0.2,2],[],cmesh,[ 290,2500],(15,7),'inferno','Four-Temperature.png',['ISO',[2000,2500]]],
+'Ptf'  :['Data-F-x0.dat','yz','total-pressure'    ,'Total pressure [Pa]' ,[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'cividis','Four-Pt.png'         ,['ISO',[0]]        ],
+'Psf'  :['Data-F-x0.dat','yz','pressure'          ,'Static pressure [Pa]',[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'cividis','Four-Ps.png'         ,['ISO',[0]]        ],
+'Velf' :['Data-F-x0.dat','yz','velocity-magnitude','Velocity [m/s]'      ,[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'cividis','Four-Velocity.png'   ,['QUIV',[1e-1,1e-1,300]]],
+'Ttop' :['Data-TOP.dat' ,'yx','temperature'       ,'Temperature [K]'     ,[]        ,[]      ,[],cmesh,[]         ,(15,7),'inferno','Top-Temperature.png' ,['INTERP']    ],
+'Htop' :['Data-TOP.dat' ,'yx','heat-flux'         ,'Heat flux [W/m2]'    ,[]        ,[]      ,[],cmesh,[]         ,(15,7),'inferno','Top-HeatFlux.png'    ,['INTERP']    ],
+}
+if dir0=='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/' :
+    Param_visu['Ptf' ][8]=[-30,20]
+    Param_visu['Psf' ][8]=[-40,1e-9]
+    Param_visu['Velf'][8]=[  0,25]
+    Param_visu['Ttop'][8]=[1740,1790]
+    Param_visu['Htop'][8]=[-8e3,-2e3]
+    Param_visu['Tcol'][8]=[299,1800]
+    Param_visu['Tcol'][-1][-1]=[1000]
+elif dir0=='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M02/' :
+    Param_visu['Velf'][8]=[   0, 25]
+    Param_visu['Ttop'][8]=[]
+    Param_visu['Htop'][8]=[]
+    if Dirs[0][5:7]=='00' :
+        Param_visu['Psf' ][8]=[  70, 95]
+        Param_visu['Ptf' ][8]=[  70,110]
+    if Dirs[0][5:7]=='01' :
+        Param_visu['Psf' ][8]=[-5,25]
+        Param_visu['Ptf' ][8]=[-5,50]

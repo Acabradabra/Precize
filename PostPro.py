@@ -13,95 +13,61 @@
 #                     Modules
 #===================================================================================
 import Utilities as util
-(Sysa,NSysa,Arg)=util.Parseur(['Temp','Compo','Report','Visu','Prof','Voute','Dump','All'],0,'Arg : ')
+(Sysa,NSysa,Arg)=util.Parseur(['Temp','Compo','Report','Visu','Prof','Voute','Dump','All'],1,'Arg : Case')
 (                             [ TEMP , COMPO , REPORT , VISU , PROF , VOUTE , DUMP , ALL ])=Arg
-if ALL : TEMP,COMPO,REPORT,VISU,PROF,VOUTE=True,True,True,True,True,True
+Case=Sysa[0]
 
 from numpy import *
 import os
-# import sys
+import sys
 # import csv
 import time
 import Fluent as fl
-
-import ParamPilotV2 as pp
 
 t0=time.time()
 (plt,mtp)=util.Plot0()
 #%%=================================================================================
 #                     Parameters
 #===================================================================================
-
 Np=int(1e3)
-
-#===============> Directories
-# dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/Walter-50pH2-60pJet/'
-# dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M00/'
-# dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/'
-# dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M02/'
-dir0='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M03/'
-# dir0='/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/'
-Dirs=[
-# 'DUMP-00-Init/'
-# 'DUMP-01-Jeu/'
-'DUMP-01-Pstat/'
-# 'DUMP-18-OD2-Bath/'
-]
+#===============> Cases
+PRECIZE,ALICE=False,False
+if   Case=='PRECIZE' : PRECIZE=True ; import ParamPilotV2 as pp
+elif Case=='ALICE'   : ALICE  =True ; import ParamALICE   as pp
+else : sys.exit('=> Case not defined')
+#===============> ALL
+if   ALL and PRECIZE : TEMP,COMPO,REPORT,VISU,PROF,VOUTE=True,True,True,True,True,True
+elif ALL and ALICE   : REPORT,VISU=True,True
+#===============> Runs
+dir0=pp.dir0
+Dirs=pp.Dirs
 if DUMP : Dirs=[ 'DUMP/' ]
 if len(Dirs)>1 : d_compa=dir0
 else           : d_compa=dir0+Dirs[0]
-
 #===============> Param Visualisation
-cmesh=0 # coef coordinate (0 : no ticks)
-# cmesh=1e2 # coef coordinate (0 : no ticks)
-# Vars=['Tf','YCO2f','YH2Of','Ptf','Psf','Velf']
-Vars=['Vcol','Tcol']
-Param_visu={
-'Tcol' :['Data-F-yc.dat','xz','temperature'       ,'Temperature [K]'     ,[-0.3,0.3],[2,4]   ,[],cmesh,[]         ,(5,9) ,'inferno','Col-Temperature.png' ,['ISO',[1800]]],
-'Vcol' :['Data-F-yc.dat','xz','velocity-magnitude','Velocity [m/s]'      ,[-0.3,0.3],[2,3]   ,[],cmesh,[]         ,(7,9) ,'cividis','Col-Velocity.png'    ,['QUIV',[2e-2,2e-2,300]]],
-'YCO2f':['Data-F-x0.dat','yz','co2'               ,'$Y_{CO_2}$ [-]'      ,[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'viridis','Four-YCO2.png'       ,[]            ],
-'YH2Of':['Data-F-x0.dat','yz','h2o'               ,'$Y_{H_2O}$ [-]'      ,[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'viridis','Four-YH2O.png'       ,[]            ],
-'Tf'   :['Data-F-x0.dat','yz','temperature'       ,'Temperature [K]'     ,[]        ,[-0.2,2],[],cmesh,[ 290,2500],(15,7),'inferno','Four-Temperature.png',['ISO',[2000,2500]]],
-'Ptf'  :['Data-F-x0.dat','yz','total-pressure'    ,'Total pressure [Pa]' ,[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'cividis','Four-Pt.png'         ,['ISO',[0]]        ],
-'Psf'  :['Data-F-x0.dat','yz','pressure'          ,'Static pressure [Pa]',[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'cividis','Four-Ps.png'         ,['ISO',[0]]        ],
-'Velf' :['Data-F-x0.dat','yz','velocity-magnitude','Velocity [m/s]'      ,[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'cividis','Four-Velocity.png'   ,['QUIV',[1e-1,1e-1,300]]],
-'Ttop' :['Data-TOP.dat' ,'yx','temperature'       ,'Temperature [K]'     ,[]        ,[]      ,[],cmesh,[]         ,(15,7),'inferno','Top-Temperature.png' ,['INTERP']    ],
-'Htop' :['Data-TOP.dat' ,'yx','heat-flux'         ,'Heat flux [W/m2]'    ,[]        ,[]      ,[],cmesh,[]         ,(15,7),'inferno','Top-HeatFlux.png'    ,['INTERP']    ],
-}
+Vars=pp.Vars
+Param_visu=pp.Param_visu
 if ALL : Vars=list(Param_visu.keys())
-if dir0=='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/' :
-    Param_visu['Ptf' ][8]=[-30,20]
-    Param_visu['Psf' ][8]=[-40,1e-9]
-    Param_visu['Velf'][8]=[  0,25]
-    Param_visu['Ttop'][8]=[1740,1790]
-    Param_visu['Htop'][8]=[-8e3,-2e3]
-    Param_visu['Tcol'][8]=[299,1800]
-    Param_visu['Tcol'][-1][-1]=[1000]
-elif dir0=='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M02/' :
-    Param_visu['Velf'][8]=[   0, 25]
-    Param_visu['Ttop'][8]=[]
-    Param_visu['Htop'][8]=[]
-    if Dirs[0][5:7]=='00' :
-        Param_visu['Psf' ][8]=[  70, 95]
-        Param_visu['Ptf' ][8]=[  70,110]
-    if Dirs[0][5:7]=='01' :
-        Param_visu['Psf' ][8]=[-5,25]
-        Param_visu['Ptf' ][8]=[-5,50]
+
+#===============> Domain names
+names_voute=["p3","p2","p1"]
+if PRECIZE : name_out="zc"     ; vol_f='fluides-fluide'
+elif ALICE : name_out="outlet" ; vol_f='volume-chambre'
 
 #===============> Param Voute
 dh=25e-3 # [m] Height of thermocouples
 lkk=2.8  # [W/m K] Radex conductivity
 
 #===============> Param profile
-fprof='Data-F-chem.dat'
-Z_four=[1.344,2.015,2.117,2.572,2.768 , 12.5]
-Ps_top=-pp.Rho_air*9.81*Z_four[-1]
-Param_prof={
-    'T'   :['temperature'   ,'Temperature [K]'     ,[ 600,2000],'Profile-T.pdf' ],
-    'Pt'  :['total-pressure','Total pressure [Pa]' ,[-150, 100],'Profile-Pt.pdf'],
-    'Ps'  :['pressure'      ,'Static pressure [Pa]',[-200, 100],'Profile-Ps.pdf'],
-    'YCO2':['co2'           ,'$Y_{CO_2}$ [-]'      ,[   0, 0.5],'Profile-YCO2.pdf'],
-}
+if PROF :
+    fprof='Data-F-chem.dat'
+    Z_four=[1.344,2.015,2.117,2.572,2.768 , 12.5]
+    Ps_top=-pp.Rho_air*9.81*Z_four[-1]
+    Param_prof={
+        'T'   :['temperature'   ,'Temperature [K]'     ,[ 600,2000],'Profile-T.pdf' ],
+        'Pt'  :['total-pressure','Total pressure [Pa]' ,[-150, 100],'Profile-Pt.pdf'],
+        'Ps'  :['pressure'      ,'Static pressure [Pa]',[-200, 100],'Profile-Ps.pdf'],
+        'YCO2':['co2'           ,'$Y_{CO_2}$ [-]'      ,[   0, 0.5],'Profile-YCO2.pdf']}
 
 #===============> Param temperature
 Pos_V=[0.51,2.17,3.098] # Voute thermocouples positions (m)
@@ -177,8 +143,8 @@ for d0 in Dirs :
     if TEMP   : #===========================================================================> Temperature
         f0=d+'report'
         Dr=fl.Report_read(f0+'-temperature-rfile.out') ; Keys=list(Dr.keys()) ; Nl=len(Dr[Keys[0]]) ; Ns=min([Nl,Np]) ; KeysT=Keys
-        Id_v=[ KeysT.index(k) for k in ["p3","p2","p1"] ]
-        I_out=KeysT.index('zc')
+        Id_v=[ KeysT.index(k) for k in names_voute if k in KeysT ]
+        I_out=KeysT.index(name_out)
         MoyT.append([ mean(Dr[k][-Ns:]) for k in KeysT ]) ; Tb=float(MoyT[-1][I_out]) ; print(f'=> Mean burned temperature : {Tb:.0f} [K]')
         DevT.append([ std( Dr[k][-Ns:]) for k in KeysT ])
         Dq=fl.Report_read(d+'report-heat-release-rfile.out') ; Keys=list(Dq.keys())
@@ -253,7 +219,7 @@ for d0 in Dirs :
             else              : Labels=Keys
             print('=> \033[31m%s\033[0m : '%(r_name) , Labels )
             figr,axr=plt.subplots(figsize=(10,7)) #; bxr=axr.twinx()
-            if r_name == 'mass-balance' :
+            if   r_name == 'mass-balance' and PRECIZE :
                 (Mf_f,Mf_o,Mf_b,Mf_l,Mf_s,Mb)=fl.Mf_sep2(Dr,Keys) ; Ns=min([len(Mb),Np])
                 Ma_f=mean(Mf_f[-Ns:])
                 Ma_o=mean(Mf_o[-Ns:])
@@ -297,9 +263,9 @@ for d0 in Dirs :
                 util.SaveFig(figd,dirp+'MassFlow-Details.pdf')
             elif r_name == 'heat-release' :
                 for n,k in enumerate(Keys[1:]) : 
-                    if 'fluides-fluide' in k :
+                    if vol_f in k :
                         axr.plot( Dr['Iteration'],Dr[k],label=Labels[n+1] )
-            elif r_name == 'heat-loss' :
+            elif r_name == 'heat-loss'    and PRECIZE :
                 Ns=min([len(Dr['Iteration']),Np])
                 figW,axW=plt.subplots(figsize=(10,7))
                 figW.suptitle('Wall heat losses',fontsize=20)
@@ -318,7 +284,7 @@ for d0 in Dirs :
                     axW.legend(fontsize=15)
                 (hl_walls,hl_talus,hl_wb,hl_bath)=fl.Hl_sep(Dr,Ns,pp.Pow,Verbose=2)
                 util.SaveFig(figW,dirp+'HeatLoss-Details.pdf')
-            elif r_name == 'temperature' :
+            elif r_name == 'temperature'  and PRECIZE :
                 figE,axE=plt.subplots(figsize=(10,7))
                 figE.suptitle('External wall temperature [K]',fontsize=20)
                 figr.suptitle('Temperature [K]',fontsize=20)
