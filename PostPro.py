@@ -52,10 +52,9 @@ Param_visu=pp.Param_visu
 if ALL   : Vars=list(Param_visu.keys())
 elif RAD : 
     Vars=['A0','A1','A2','A3','A4','K0','K1','K2','K3','K4','Wm','Tx']
-    # Vars=['Tx']
     Param_visu['Tx'][-1][-1]=[300,2400]
 elif UDF : 
-    Vars=['Tudf']
+    Vars=['Rhcx']
     Surfs_udf={ k:Param_visu[k][0] for k in Vars }
     Plans_udf={ k:Param_visu[k][1] for k in Vars }
 
@@ -331,10 +330,16 @@ for d0 in Dirs :
         for k in Param_prof : AX_P[k].plot(Data['z-coordinate'],Data[Param_prof[k][0]])
     if UDF    : #===========================================================================> User defined functions
         for k in Vars :
-            (T,M)=fl.ReadSurf(d+'DATA/'+Surfs_udf[k])
-            (V1,V2)=fl.Vxyz(            Plans_udf[k],M,T)
-            Param_visu[k][0]=(T,M)
-            Param_visu[k][1]=(V1,V2)
+            if k=='Rhcx' :
+                var=Param_visu[k][2]
+                (T,M)=fl.ReadSurfD(d+'DATA/'+Surfs_udf[k])
+                (V1,V2)=fl.Vxyz(             Plans_udf[k],M,T)
+                X_h2o=M['molef-h2o']
+                X_co2=M['molef-co2']
+                Rhc=X_h2o/(X_co2+pp.Rhc_tol)
+                M[var]=clip(Rhc,pp.Rhc_lim[0],pp.Rhc_lim[1])
+                Param_visu[k][0]=(T,M)
+                Param_visu[k][1]=(V1,V2)
     if VISU   : #===========================================================================> Visualisation
         F_int={}
         for k in Vars : 
