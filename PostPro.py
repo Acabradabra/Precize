@@ -54,7 +54,10 @@ elif RAD :
     Vars=['A0','A1','A2','A3','A4','K0','K1','K2','K3','K4','Wm','Tx']
     # Vars=['Tx']
     Param_visu['Tx'][-1][-1]=[300,2400]
-elif UDF : Vars=['Tudf']
+elif UDF : 
+    Vars=['Tudf']
+    Surfs_udf={ k:Param_visu[k][0] for k in Vars }
+    Plans_udf={ k:Param_visu[k][1] for k in Vars }
 
 #===============> Domain names
 names_voute=["p3","p2","p1"]
@@ -326,11 +329,17 @@ for d0 in Dirs :
     if PROF   : #===========================================================================> profile
         Data=fl.ReadSurfD(d+'DATA/'+fprof)
         for k in Param_prof : AX_P[k].plot(Data['z-coordinate'],Data[Param_prof[k][0]])
+    if UDF    : #===========================================================================> User defined functions
+        for k in Vars :
+            (T,M)=fl.ReadSurf(d+'DATA/'+Surfs_udf[k])
+            (V1,V2)=fl.Vxyz(            Plans_udf[k],M,T)
+            Param_visu[k][0]=(T,M)
+            Param_visu[k][1]=(V1,V2)
     if VISU   : #===========================================================================> Visualisation
         F_int={}
         for k in Vars : 
-            Param_visu[k][0 ]=d+'DATA/'+Param_visu[k][0 ]
-            Param_visu[k][11]=dirp     +Param_visu[k][11]
+            if isinstance(Param_visu[k][0 ],str) : Param_visu[k][0 ]=d+'DATA/'+Param_visu[k][0 ]
+            if isinstance(Param_visu[k][11],str) : Param_visu[k][11]=dirp     +Param_visu[k][11]
             F_int[k]=fl.Visu(*Param_visu[k])
     if VOUTE  : #===========================================================================> Voute
         if PRECIZE :

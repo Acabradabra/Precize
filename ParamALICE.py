@@ -102,7 +102,7 @@ Param_visu={
 'K3'   :['DRad-mid.dat'  ,'zy','k3'                ,r'Coef gg3 [-]'       , []      ,[]         , [],cmesh,[]     , (25,5) , 'inferno','Mid-K3.png'              ,['Tiso',[300,2400]]],
 'K4'   :['DRad-mid.dat'  ,'zy','k4'                ,r'Coef gg4 [-]'       , []      ,[]         , [],cmesh,[]     , (25,5) , 'inferno','Mid-K4.png'              ,['Tiso',[300,2400]]],
 'Wm'   :['DRad-mid.dat'  ,'zy','wm'                ,r'Wm [$g/mol$]'       , []      ,[]         , [],cmesh,[]     , (25,5) , 'inferno','Mid-Wm.png'              ,[]],
-'Tudf' :['Data-mid.dat'  ,'zy','temperature'       ,r'Temperature [K]'    , []      ,[]         , [],cmesh,[]     , (25,5) , 'inferno','Mid-Temperature.png'     ,['ISO',[2000,3000,4000]]],
+'Rhcx' :['Data-mid.dat'  ,'zy','rhc'           ,r'$X_{H_2O}/X_{CO_2}$ [K]', []      ,[]         , [],cmesh,[]     , (25,5) , 'inferno','Mid-Rhc.png'             ,[]],
 'Hr'   :['Data-mid.dat'  ,'zy','expr:hrr',r'Heat release rate [$mW/m^3$]' , [-0.1,1],[-0.2,0.2] , [],cmesh,[0,1e3], (15,6) , 'inferno','Mid-HeatRelease.png'     ,['GAIN',[1e-6]]],
 'Ttop' :['Data-roof.dat' ,'zx','temperature'       ,r'Temperature [K]'    , []      ,[]         , [],cmesh,[]     , (15,5) , 'inferno','Roof-Temperature.png'    ,['INTERP','ISO',[2000]]],
 'Tx_z' :['Data-mid.dat'  ,'zy','temperature'       ,r'Temperature [K]'    , [-0.1,4],[]         , [],cmesh,[]     , (15,6) , 'inferno','Mid-Temperature_Zoom.png',['ISO',[2000,3000,4000]]],
