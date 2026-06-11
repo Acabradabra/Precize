@@ -13,8 +13,8 @@
 #                     Modules
 #===================================================================================
 import Utilities as util
-(Sysa,NSysa,Arg)=util.Parseur(['Temp','Compo','Report','Visu','Prof','Voute','Dump','All'],1,'Arg : Case')
-(                             [ TEMP , COMPO , REPORT , VISU , PROF , VOUTE , DUMP , ALL ])=Arg
+(Sysa,NSysa,Arg)=util.Parseur(['Temp','Compo','Report','Visu','Prof','Voute','Dump','Rad','UDF','All'],1,'Arg : Case')
+(                             [ TEMP , COMPO , REPORT , VISU , PROF , VOUTE , DUMP , RAD , UDF , ALL ])=Arg
 Case=Sysa[0]
 
 from numpy import *
@@ -30,6 +30,8 @@ t0=time.time()
 #                     Parameters
 #===================================================================================
 Np=int(1e3)
+Ng=int(1e3)
+type='svg'
 #===============> Cases
 PRECIZE,ALICE=False,False
 if   Case=='PRECIZE' : PRECIZE=True ; import ParamPilotV2 as pp
@@ -37,7 +39,7 @@ elif Case=='ALICE'   : ALICE  =True ; import ParamALICE   as pp
 else : sys.exit('=> Case not defined')
 #===============> ALL
 if   ALL and PRECIZE : TEMP,COMPO,REPORT,VISU,PROF,VOUTE=True,True,True,True,True,True
-elif ALL and ALICE   : REPORT,VISU=True,True
+elif ALL and ALICE   : REPORT,VISU,VOUTE=True,True,True
 #===============> Runs
 dir0=pp.dir0
 Dirs=pp.Dirs
@@ -47,7 +49,12 @@ else           : d_compa=dir0+Dirs[0]
 #===============> Param Visualisation
 Vars=pp.Vars
 Param_visu=pp.Param_visu
-if ALL : Vars=list(Param_visu.keys())
+if ALL   : Vars=list(Param_visu.keys())
+elif RAD : 
+    Vars=['A0','A1','A2','A3','A4','K0','K1','K2','K3','K4','Wm','Tx']
+    # Vars=['Tx']
+    Param_visu['Tx'][-1][-1]=[300,2400]
+elif UDF : Vars=['Tudf']
 
 #===============> Domain names
 names_voute=["p3","p2","p1"]
@@ -102,10 +109,7 @@ Compo_p={'O2':6,'CO':1894,'CO2':41} # 100% H2 L254
 Compo_p['N2']=100-(Compo_p['O2']+Compo_p['CO']*1e-4+Compo_p['CO2'])
 Compo_m={}
 Compo_d={}
-# probe='outlet-fumes'
-probe='pd'
-# probe='sample_d'
-# probe='sample_c'
+probe=pp.probe
 
 #===============> Inlet properties
 Tu=300 # Ambient temperature (K)
@@ -115,13 +119,25 @@ Tu=300 # Ambient temperature (K)
 #===================================================================================
 if VOUTE :
     if VISU==False : VISU=True
-    if 'Ttop' not in Vars : Vars.append('Ttop')
-    if 'Htop' not in Vars : Vars.append('Htop')
-    figV,axV=plt.subplots(figsize=(10,6)) #; bxV=axV.twinx()
-    figV.suptitle('Voute Temperature',fontsize=20)
-    axV.set_xlabel('Y position [m]',fontsize=16)
-    axV.set_ylabel('Temperature [K]',fontsize=16)
-    axV.plot(Pos_V,T_exp[:3],'ok',label='Pilot')
+    if 'Ttop' not in Vars             : Vars.append('Ttop')
+    if 'Htop' not in Vars and PRECIZE : Vars.append('Htop')
+    if PRECIZE :
+        figV,axV=plt.subplots(figsize=(10,6)) #; bxV=axV.twinx()
+        figV.suptitle('Voute Temperature',fontsize=20)
+        axV.set_xlabel('Y position [m]'  ,fontsize=16)
+        axV.set_ylabel('Temperature [K]' ,fontsize=16)
+        axV.plot(Pos_V,T_exp[:3],'ok',label='Pilot')
+    elif ALICE :
+        fig_a,ax_a=plt.subplots(figsize=(10,6))
+        fig_a.suptitle('Voute Temperature'  ,fontsize=25)
+        ax_a.set_xlabel('Axial position [m]',fontsize=20)
+        ax_a.set_ylabel('Temperature [°C]'   ,fontsize=20)
+        util.PlotIm(ax_a,'INPUT/Axial.png',[0,6.1,1300,1600])
+        fig_r,ax_r=plt.subplots(figsize=(10,6))
+        fig_r.suptitle('Voute Temperature'   ,fontsize=25)
+        ax_r.set_xlabel('Radial position [m]',fontsize=20)
+        ax_r.set_ylabel('Temperature [°C]'    ,fontsize=20)
+        util.PlotIm(ax_r,'INPUT/Radial.png',[-1,1,1300,1600])
 #===================================================================================
 if PROF :
     FIG_P,AX_P={},{}
@@ -262,15 +278,20 @@ for d0 in Dirs :
                 axd[1].legend(fontsize=15)
                 util.SaveFig(figd,dirp+'MassFlow-Details.pdf')
             elif r_name == 'heat-release' :
+                axr.set_ylabel('Heat Release [kW]',fontsize=25)
                 for n,k in enumerate(Keys[1:]) : 
                     if vol_f in k :
-                        axr.plot( Dr['Iteration'],Dr[k],label=Labels[n+1] )
+                        axr.plot( Dr['Iteration'][Nskip:],Dr[k][Nskip:]*1e-3,label=Labels[n+1] )
+            elif r_name == 'heat-loss'    :
+                axr.set_ylabel('Heat losses [kW]',fontsize=25)
+                for n,k in enumerate(Keys[1:]) : axr.plot( Dr['Iteration'][Nskip:],Dr[k][Nskip:]*1e-3,label=Labels[n+1] )
+                if len(Keys)>2 : axr.legend(fontsize=15)
             elif r_name == 'heat-loss'    and PRECIZE :
                 Ns=min([len(Dr['Iteration']),Np])
                 figW,axW=plt.subplots(figsize=(10,7))
                 figW.suptitle('Wall heat losses',fontsize=20)
-                axr.set_ylabel('Heat loss [kW]',fontsize=25)
-                axW.set_ylabel('Heat loss [kW]',fontsize=25)
+                axr.set_ylabel('Heat loss [kW]' ,fontsize=25)
+                axW.set_ylabel('Heat loss [kW]' ,fontsize=25)
                 for n,k in enumerate(Keys[1:]) : 
                         if k not in ['f-ts','f-tt','f-vs'] :
                             axr.plot( Dr['Iteration'][Nskip:],Dr[k][Nskip:]*1e-3,label=Labels[n+1] )
@@ -299,7 +320,7 @@ for d0 in Dirs :
                 for n,k in enumerate(Keys[1:]) : axr.plot( Dr['Iteration'],Dr[k],label=Labels[n+1] )
                 if len(Keys)>2 : axr.legend(fontsize=15) #,loc='center',bbox_to_anchor=(0.7,0.3))
             # if len(Keys)>2 : figr.legend(fontsize=15,loc='center',bbox_to_anchor=(0.7,0.3))
-            if r_name in ['heat-release','mass-balance','shell-loss','co2'] :
+            if r_name in ['heat-release','heat-loss','mass-balance','shell-loss','co2'] :
                 axr.ticklabel_format( axis='y' , scilimits=(-3,3) )
             util.SaveFig(figr,dirp+'Report-%s.pdf'%(r_name))
     if PROF   : #===========================================================================> profile
@@ -312,21 +333,30 @@ for d0 in Dirs :
             Param_visu[k][11]=dirp     +Param_visu[k][11]
             F_int[k]=fl.Visu(*Param_visu[k])
     if VOUTE  : #===========================================================================> Voute
-        Vy=linspace(0.4,3.7,int(1e3))
-        Vx=0*Vy
-        T_int=F_int['Ttop'](Vy,Vx)
-        H_int=F_int['Htop'](Vy,Vx)
-        Vy2=Vy-Vy[0]
-        T_w1  =T_int+(dh+1e-3)*H_int/lkk
-        T_wall=T_int+ dh      *H_int/lkk
-        T_w2  =T_int+(dh-1e-3)*H_int/lkk
-        # axV.plot(Vy,T_int ,'k')
-        axV.plot(Vy,T_wall,'b')
-        axV.plot(Vy,T_w1  ,':b')
-        axV.plot(Vy,T_w2  ,':b')
-        # bxV.plot(Vy,H_int,'r')
-        util.SaveFig(figV,dirp+'T-Voute-Int.pdf')
-
+        if PRECIZE :
+            Vy=linspace(0.4,3.7,Ng)
+            Vx=0*Vy
+            T_int=F_int['Ttop'](Vy,Vx)
+            H_int=F_int['Htop'](Vy,Vx)
+            Vy2=Vy-Vy[0]
+            T_w1  =T_int+(dh+1e-3)*H_int/lkk
+            T_wall=T_int+ dh      *H_int/lkk
+            T_w2  =T_int+(dh-1e-3)*H_int/lkk
+            axV.plot(Vy,T_wall,'b')
+            axV.plot(Vy,T_w1  ,':b')
+            axV.plot(Vy,T_w2  ,':b')
+            util.SaveFig(figV,dirp+'T-Voute-Int.'+type)
+        elif ALICE :
+            Va=linspace( 0,8,Ng)
+            Vr=linspace(-1,1,Ng)
+            T_axial=F_int['Ttop'](Va,0*Va)
+            T_radz1=F_int['Ttop'](Ng*[1.0],Vr)
+            T_radz2=F_int['Ttop'](Ng*[2.5],Vr)
+            ax_a.plot(Va,T_axial-273.15,'k')
+            ax_r.plot(Vr,T_radz1-273.15,'b')
+            ax_r.plot(Vr,T_radz2-273.15,'r')
+            util.SaveFig(fig_a,dirp+'T-Axial.' +type)
+            util.SaveFig(fig_r,dirp+'T-Radial.'+type)
 if PROF : 
     for k in Param_prof.keys() : util.SaveFig(FIG_P[k],d_compa+Param_prof[k][-1])
 

@@ -150,3 +150,9 @@ elif dir0=='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M02/' :
     if Dirs[0][5:7]=='01' :
         Param_visu['Psf' ][8]=[-5,25]
         Param_visu['Ptf' ][8]=[-5,50]
+
+#===============> Composition position
+# probe='outlet-fumes'
+probe='pd'
+# probe='sample_d'
+# probe='sample_c'
