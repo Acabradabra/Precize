@@ -7,11 +7,18 @@ dfl='/mnt/beegfs/ZEUS/FLUENT/'
 # dir0=dfl+'PRECIZE/RUN-M00/'
 # dir0=dfl+'PRECIZE/RUN-M01/'
 # dir0=dfl+'PRECIZE/RUN-M02/'
-dir0=dfl+'PRECIZE/RUN-M03/'
+# dir0=dfl+'PRECIZE/RUN-M03/'
+dir0=dfl+'PRECIZE/'
 Vs='V04'
 
 #====================> Runs
 Dirs=[
+'RUN-M01/DUMP-18-OD2-Bath/',
+'RUN-M02/DUMP-00-Init/'
+]
+Labels=[
+'75%',
+'25%'
 ]
 
 #====================> Atmospheric conditions
@@ -119,7 +126,8 @@ heat_sink=-292 # [kW]
 #===============> Param Visualisation
 cmesh=0 # coef coordinate (0 : no ticks)
 # cmesh=1e2 # coef coordinate (0 : no ticks)
-Vars=['Vcol','Tcol']
+# Vars=['Vcol','Tcol']
+Vars=[]
 Param_visu={
 'Tcol' :['Data-F-yc.dat','xz','temperature'       ,'Temperature [K]'     ,[-0.3,0.3],[2,4]   ,[],cmesh,[]         ,(5,9) ,'inferno','Col-Temperature.png' ,['ISO',[1800]]],
 'Vcol' :['Data-F-yc.dat','xz','velocity-magnitude','Velocity [m/s]'      ,[-0.3,0.3],[2,3]   ,[],cmesh,[]         ,(7,9) ,'cividis','Col-Velocity.png'    ,['QUIV',[2e-2,2e-2,300]]],

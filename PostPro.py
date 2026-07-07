@@ -13,8 +13,8 @@
 #                     Modules
 #===================================================================================
 import Utilities as util
-(Sysa,NSysa,Arg)=util.Parseur(['Temp','Compo','Report','Visu','Prof','Voute','Dump','Rad','UDF','All'],1,'Arg : Case')
-(                             [ TEMP , COMPO , REPORT , VISU , PROF , VOUTE , DUMP , RAD , UDF , ALL ])=Arg
+(Sysa,NSysa,Arg)=util.Parseur(['Temp','Compo','Report','Visu','Prof','Walls','Dump','Rad','UDF','Zoom','All'],1,'Arg : Case')
+(                             [ TEMP , COMPO , REPORT , VISU , PROF , WALLS , DUMP , RAD , UDF , ZOOM , ALL ])=Arg
 Case=Sysa[0]
 
 from numpy import *
@@ -31,6 +31,7 @@ t0=time.time()
 #===================================================================================
 Np=int(1e3)
 Ng=int(1e3)
+Nskip=100
 type='svg'
 #===============> Cases
 PRECIZE,ALICE=False,False
@@ -38,25 +39,32 @@ if   Case=='PRECIZE' : PRECIZE=True ; import ParamPilotV2 as pp
 elif Case=='ALICE'   : ALICE  =True ; import ParamALICE   as pp
 else : sys.exit('=> Case not defined')
 #===============> ALL
-if   ALL and PRECIZE : TEMP,COMPO,REPORT,VISU,PROF,VOUTE=True,True,True,True,True,True
-elif ALL and ALICE   : REPORT,VISU,VOUTE=True,True,True
+if   ALL and PRECIZE : TEMP,COMPO,REPORT,VISU,PROF,WALLS=True,True,True,True,True,True
+elif ALL and ALICE   : REPORT,VISU,WALLS=True,True,True
 #===============> Runs
 dir0=pp.dir0
 Dirs=pp.Dirs
 if DUMP : Dirs=[ 'DUMP/' ]
-if len(Dirs)>1 : d_compa=dir0
+if len(Dirs)>1 : d_compa=dir0+'PLOT/' ; util.MKDIR(d_compa)
 else           : d_compa=dir0+Dirs[0]
 #===============> Param Visualisation
 Vars=pp.Vars
 Param_visu=pp.Param_visu
-if ALL   : Vars=list(Param_visu.keys())
+if ALL   : 
+    # Vars=list(Param_visu.keys())
+    # Vars=[ 'Hr','Hbot','Tbot','Ttop','Tx_z','Tx','XCO2x','XH2Ox','XO2x','XN2x','YCO2x','YH2Ox','YO2x','YN2x','Psx','Ptx','Vy','Vy_z','Vx','Vx_z' ]
+    Vars=['Tx_z','Tx','XCO2x','XH2Ox','XO2x','XN2x','YCO2x','YH2Ox','YO2x','YN2x','Psx','Ptx','Vy','Vy_z','Vx','Vx_z' ]
 elif RAD : 
     Vars=['A0','A1','A2','A3','A4','K0','K1','K2','K3','K4','Wm','Tx']
     Param_visu['Tx'][-1][-1]=[300,2400]
 elif UDF : 
-    Vars=['Rhcx']
+    # Vars=['Rhcx']
+    Vars=['Rhcx','XH2Ox','XCO2x']
     Surfs_udf={ k:Param_visu[k][0] for k in Vars }
     Plans_udf={ k:Param_visu[k][1] for k in Vars }
+Bdx_z=[-0.1,1.0]
+Bdy_z=[-0.2,0.2]
+Fig_z=(15,6)
 
 #===============> Domain names
 names_voute=["p3","p2","p1"]
@@ -77,6 +85,8 @@ if PROF :
         'Pt'  :['total-pressure','Total pressure [Pa]' ,[-150, 100],'Profile-Pt.pdf'],
         'Ps'  :['pressure'      ,'Static pressure [Pa]',[-200, 100],'Profile-Ps.pdf'],
         'YCO2':['co2'           ,'$Y_{CO_2}$ [-]'      ,[   0, 0.5],'Profile-YCO2.pdf']}
+Col_p=['b','r','g','c','m','y','k']
+Lab_d=pp.Labels
 
 #===============> Param temperature
 Pos_V=[0.51,2.17,3.098] # Voute thermocouples positions (m)
@@ -86,9 +96,6 @@ Pos_V=[0.51,2.17,3.098] # Voute thermocouples positions (m)
 T_exp=array([ 1150,1400,1150 , 1350 ])+273.15 # Pilot temperatures (K) 
 MoyT=[]
 DevT=[]
-
-#===============> Param Heat losses
-Nskip=100
 
 #===============> Param composition
 # dil=0.45 # dilution Mf_leak/Mf_tot
@@ -119,10 +126,12 @@ Tu=300 # Ambient temperature (K)
 #%%=================================================================================
 #                     Process
 #===================================================================================
-if VOUTE :
+if WALLS :
     if VISU==False : VISU=True
     if 'Ttop' not in Vars             : Vars.append('Ttop')
     if 'Htop' not in Vars and PRECIZE : Vars.append('Htop')
+    if 'Tbot' not in Vars and ALICE   : Vars.append('Tbot')
+    if 'Hbot' not in Vars and ALICE   : Vars.append('Hbot')
     if PRECIZE :
         figV,axV=plt.subplots(figsize=(10,6)) #; bxV=axV.twinx()
         figV.suptitle('Voute Temperature',fontsize=20)
@@ -140,6 +149,13 @@ if VOUTE :
         ax_r.set_xlabel('Radial position [m]',fontsize=20)
         ax_r.set_ylabel('Temperature [°C]'    ,fontsize=20)
         util.PlotIm(ax_r,'INPUT/Radial.png',[-1,1,1300,1600])
+        fig_h,ax_h=plt.subplots(figsize=(10,6))
+        fig_h.suptitle('Floor heat flux'   ,fontsize=25)
+        ax_h.set_xlabel('Axial position [m]',fontsize=20)
+        ax_h.set_ylabel(r'Heat flux [$W/m^2$]'    ,fontsize=20)
+        ax_h.plot(pp.Pos_h,pp.Hf,'ok')
+#===================================================================================
+if COMPO :
 #===================================================================================
 if PROF :
     FIG_P,AX_P={},{}
@@ -155,9 +171,9 @@ if PROF :
     AX_P['Ps'].plot([0,Z_four[-1]],[0,Ps_top],'k' )
 #===================================================================================
 T_dil=[]
-for d0 in Dirs :
+for nd,d0 in enumerate(Dirs) :
     d=dir0+d0
-    print('=> '+d) ; dirp=d+'PLOT/'
+    print(util.Col('r','=> '+d)) ; dirp=d+'PLOT/'
     if TEMP   : #===========================================================================> Temperature
         f0=d+'report'
         Dr=fl.Report_read(f0+'-temperature-rfile.out') ; Keys=list(Dr.keys()) ; Nl=len(Dr[Keys[0]]) ; Ns=min([Nl,Np]) ; KeysT=Keys
@@ -176,7 +192,6 @@ for d0 in Dirs :
         fig_c,ax_c=plt.subplots(figsize=(10,6),ncols=Nspe-1,nrows=2)
         fig_d,ax_d=plt.subplots(figsize=( 8,6),ncols=Nspe-2)
         fig_c.suptitle('Molar fractions (%s)'%(probe),fontsize=20)
-        # fig_d.suptitle(f'Dry molar fraction ({'\033[31m'}Simu{'\033[0m'}Pilot) : {dil*1e2:.0f} % diluted',fontsize=20)
         fig_d.suptitle(f'Dry molar fraction : {dil*1e2:.0f} % diluted',fontsize=20)
         for n,k in enumerate(Rfiles) : #=====> Wet
             f_C=d+Rfiles[k]
@@ -216,7 +231,7 @@ for d0 in Dirs :
         for n,k in enumerate(Keys_d) : #=====> Dry + Dilution
             E=100*abs(Compo_p[k]-Xd_d[k]*Coef[k])/Compo_p[k]
             ax_d[n].plot(2*[0] , [Compo_p[k],Xd_d[k]*Coef[k]] , ':k')
-            ax_d[n].plot(  [0] , [   Xd_d[k]*Coef[k]] , 'or')
+            ax_d[n].plot(  [0] , [   Xd_d[k]*Coef[k]] , 'o'+Col_p[nd])
             ax_d[n].plot(  [0] , [Compo_p[k]        ] , 'ok')
             ax_d[n].set_xticks([])
             ax_d[n].set_yticks([ round(x, 1) for x in sorted([Xd_d[k]*Coef[k],Compo_p[k]]) ])
@@ -230,7 +245,7 @@ for d0 in Dirs :
         util.SaveFig( fig_c,d+'Plot/Compo-%s.pdf'%(probe) )
         util.SaveFig( fig_d,d+'Plot/Compo-%s_diluted.pdf'%(probe) )
     if REPORT : #===========================================================================> Report
-        for rf in os.popen('ls %s/report-*-rfile.out'%(d)).read().splitlines() :
+        for rf in [ r for r in os.popen('ls %s/report-*-rfile.out'%(d)).read().splitlines() if '' in r ] :
             r_name=rf.split('/')[-1][7:-10]
             Dr=fl.Report_read(rf) ; Keys=list(Dr.keys()) #; print(Keys)
             if '(' in Keys[1] : Labels=['Iteration']+[ k.split('(')[1][:-1] for k in Keys[1:] if '(' in k ]
@@ -284,10 +299,44 @@ for d0 in Dirs :
                 for n,k in enumerate(Keys[1:]) : 
                     if vol_f in k :
                         axr.plot( Dr['Iteration'][Nskip:],Dr[k][Nskip:]*1e-3,label=Labels[n+1] )
-            elif r_name == 'heat-loss'    :
-                axr.set_ylabel('Heat losses [kW]',fontsize=25)
-                for n,k in enumerate(Keys[1:]) : axr.plot( Dr['Iteration'][Nskip:],Dr[k][Nskip:]*1e-3,label=Labels[n+1] )
-                if len(Keys)>2 : axr.legend(fontsize=15)
+            elif r_name == 'heat-loss'    and ALICE and ("w_parois" in Keys or "w_top" in Keys) :
+                Ns=min([len(Dr['Iteration']),Np])
+                figW,axW=plt.subplots(figsize=(10,7))
+                axr.set_ylabel('Heat loss [kW]'     ,fontsize=25)
+                axW.set_ylabel('Heat loss part [%]' ,fontsize=25)
+                if dir0[-2]=='0' :
+                    surf_hl=["w_parois","w_talus_face","w_talus_back","w_sole_1a_avant","w_sole_1b_avant","w_sole_refrac"]
+                    h_outlt=-1e2*(sum(array([ Dr[k] for k in ["outlet"]                                                                                                                 ]),axis=0))/(pp.Pow*1e3) ; hav_outlt=mean(h_outlt[-Ns:])
+                    h_floor=-1e2*(sum(array([ Dr[k] for k in ["w_sole_refrac"]                                                                                                          ]),axis=0))/(pp.Pow*1e3) ; hav_floor=mean(h_floor[-Ns:])
+                    h_walls=-1e2*(sum(array([ Dr[k] for k in ["w_parois","w_porte","w_cheminee","w_transition"]                                                                         ]),axis=0))/(pp.Pow*1e3) ; hav_walls=mean(h_walls[-Ns:])
+                    h_talus=-1e2*(sum(array([ Dr[k] for k in ["w_talus_face","w_talus_back","w_talus_right","w_talus_left"]                                                             ]),axis=0))/(pp.Pow*1e3) ; hav_talus=mean(h_talus[-Ns:])
+                    h_loss1=-1e2*(sum(array([ Dr[k] for k in [f"w_sole_{s:s}" for s in ['1a_avant','1b_avant','2a_avant','2b_avant']]                                                   ]),axis=0))/(pp.Pow*1e3) ; hav_loss1=mean(h_loss1[-Ns:])
+                    h_loss2=-1e2*(sum(array([ Dr[k] for k in [ s for s in Keys if "w_sole" in s and not s in ['w_sole_1a_avant','w_sole_1b_avant','w_sole_2a_avant','w_sole_2b_avant']] ]),axis=0))/(pp.Pow*1e3) ; hav_loss2=mean(h_loss2[-Ns:])
+                elif dir0[-2]=='1' :
+                    surf_hl=["w_top","w_bot",'f_f1','f_c1','f_b1',"outlet"]
+                    h_outlt=-1e2*(sum(array([ Dr[k] for k in ["outlet"]                                                  ]),axis=0))/(pp.Pow*1e3) ; hav_outlt=mean(h_outlt[-Ns:])
+                    h_floor=-1e2*(sum(array([ Dr[k] for k in ["w_bot"]                                                   ]),axis=0))/(pp.Pow*1e3) ; hav_floor=mean(h_floor[-Ns:])
+                    h_walls=-1e2*(sum(array([ Dr[k] for k in ["w_top","w_left","w_right","w_front","w_conv"]             ]),axis=0))/(pp.Pow*1e3) ; hav_walls=mean(h_walls[-Ns:])
+                    h_talus=-1e2*(sum(array([ Dr[k] for k in ["f_c1","f_c1","f_c1","f_c1","f_c1"]                        ]),axis=0))/(pp.Pow*1e3) ; hav_talus=mean(h_talus[-Ns:])
+                    h_loss1=-1e2*(sum(array([ Dr[k] for k in [f"f_{s:s}" for s in ['f1','f2']]                           ]),axis=0))/(pp.Pow*1e3) ; hav_loss1=mean(h_loss1[-Ns:])
+                    h_loss2=-1e2*(sum(array([ Dr[k] for k in [ s for s in Keys if "f_" in s and not s in ['f_f1','f_f2']]]),axis=0))/(pp.Pow*1e3) ; hav_loss2=mean(h_loss2[-Ns:])
+                    h_volet=-1e2*(sum(array([ Dr[k] for k in ["w_volet","w_vouv"]                                        ]),axis=0))/(pp.Pow*1e3) ; hav_volet=mean(h_volet[-Ns:])
+                bal_hl=100-(hav_floor+hav_walls+hav_talus+hav_loss1+hav_loss2+hav_outlt+hav_volet)
+                figW.suptitle(f'Heat losses balance : {bal_hl:.1f}%',fontsize=20)
+                axW.plot( Dr['Iteration'][Nskip:],h_walls[Nskip:],label='Walls'    )
+                axW.plot( Dr['Iteration'][Nskip:],h_talus[Nskip:],label='Talus'    )
+                axW.plot( Dr['Iteration'][Nskip:],h_loss1[Nskip:],label='Cooling'  )
+                axW.plot( Dr['Iteration'][Nskip:],h_loss2[Nskip:],label='Isolated' )
+                axW.plot( Dr['Iteration'][Nskip:],h_floor[Nskip:],label='Floor'    )
+                axW.plot( Dr['Iteration'][Nskip:],h_outlt[Nskip:],label='Outlet'   )
+                axW.plot( Dr['Iteration'][Nskip:],h_volet[Nskip:],label='Volet'    )
+                for n,k in enumerate(Keys[1:]) : 
+                    if k in surf_hl : 
+                        axr.plot( Dr['Iteration'][Nskip:],Dr[k][Nskip:]*1e-3,label=Labels[n+1] )
+                if len(Keys)>2 : 
+                    axr.legend(fontsize=15)
+                    axW.legend(fontsize=15)
+                util.SaveFig(figW,dirp+'HeatLoss-Details.pdf')
             elif r_name == 'heat-loss'    and PRECIZE :
                 Ns=min([len(Dr['Iteration']),Np])
                 figW,axW=plt.subplots(figsize=(10,7))
@@ -307,6 +356,14 @@ for d0 in Dirs :
                     axW.legend(fontsize=15)
                 (hl_walls,hl_talus,hl_wb,hl_bath)=fl.Hl_sep(Dr,Ns,pp.Pow,Verbose=2)
                 util.SaveFig(figW,dirp+'HeatLoss-Details.pdf')
+            elif r_name == 'heat-loss'    :
+                axr.set_ylabel('Heat losses [kW]',fontsize=25)
+                for n,k in enumerate(Keys[1:]) : axr.plot( Dr['Iteration'][Nskip:],Dr[k][Nskip:]*1e-3,label=Labels[n+1] )
+                if len(Keys)>2 : axr.legend(fontsize=15)
+            elif r_name == 'temperature'  and ALICE   :
+                for n,k in enumerate(Keys[1:]) : axr.plot( Dr['Iteration'],Dr[k],label=Labels[n+1] )
+                axr.plot( [Dr['Iteration'][0],Dr['Iteration'][-1]],2*[pp.Tax[4]+273.15],':k',label='Pilot' )
+                if len(Keys)>2 : axr.legend(fontsize=15)
             elif r_name == 'temperature'  and PRECIZE :
                 figE,axE=plt.subplots(figsize=(10,7))
                 figE.suptitle('External wall temperature [K]',fontsize=20)
@@ -333,20 +390,29 @@ for d0 in Dirs :
             if k=='Rhcx' :
                 var=Param_visu[k][2]
                 (T,M)=fl.ReadSurfD(d+'DATA/'+Surfs_udf[k])
-                (V1,V2)=fl.Vxyz(             Plans_udf[k],M,T)
+                (V1,V2,Sel)=fl.Vxyz(             Plans_udf[k],M,T,[])
                 X_h2o=M['molef-h2o']
                 X_co2=M['molef-co2']
                 Rhc=X_h2o/(X_co2+pp.Rhc_tol)
-                M[var]=clip(Rhc,pp.Rhc_lim[0],pp.Rhc_lim[1])
-                Param_visu[k][0]=(T,M)
-                Param_visu[k][1]=(V1,V2)
+                M[var]=clip(Rhc,pp.Rhc_lim[0],pp.Rhc_lim[1]) ; T.append(var)
+                for k2 in [k,'XH2Ox','XCO2x'] :
+                    Param_visu[k2][0]=(T,M)
+                    Param_visu[k2][1]=(V1,V2)
+                    Param_visu[k2][4]=[-0.1,1]
+                    Param_visu[k2][5]=[-0.2,0.2]
+                    Param_visu[k2][9]=(15,6)
     if VISU   : #===========================================================================> Visualisation
         F_int={}
         for k in Vars : 
-            if isinstance(Param_visu[k][0 ],str) : Param_visu[k][0 ]=d+'DATA/'+Param_visu[k][0 ]
-            if isinstance(Param_visu[k][11],str) : Param_visu[k][11]=dirp     +Param_visu[k][11]
-            F_int[k]=fl.Visu(*Param_visu[k])
-    if VOUTE  : #===========================================================================> Voute
+            prm_loc=Param_visu[k][:]
+            if isinstance(prm_loc[0 ],str) : prm_loc[0 ]=d+'DATA/'+prm_loc[0 ]# ; print(util.Col('b',prm_loc[0 ]))
+            if isinstance(prm_loc[11],str) : prm_loc[11]=dirp     +prm_loc[11]# ; print(util.Col('b',prm_loc[11]))
+            if ZOOM : 
+                prm_loc[4]=Bdx_z
+                prm_loc[5]=Bdy_z
+                prm_loc[9]=Fig_z
+            F_int[k]=fl.Visu(*prm_loc)
+    if WALLS  : #===========================================================================> WALLS
         if PRECIZE :
             Vy=linspace(0.4,3.7,Ng)
             Vx=0*Vy
@@ -356,26 +422,41 @@ for d0 in Dirs :
             T_w1  =T_int+(dh+1e-3)*H_int/lkk
             T_wall=T_int+ dh      *H_int/lkk
             T_w2  =T_int+(dh-1e-3)*H_int/lkk
-            axV.plot(Vy,T_wall,'b')
-            axV.plot(Vy,T_w1  ,':b')
-            axV.plot(Vy,T_w2  ,':b')
-            util.SaveFig(figV,dirp+'T-Voute-Int.'+type)
+            axV.plot(Vy,T_wall,    Col_p[nd],label=Lab_d[nd])
+            axV.plot(Vy,T_w1  ,':'+Col_p[nd])
+            axV.plot(Vy,T_w2  ,':'+Col_p[nd])
         elif ALICE :
+            #==============================> Voute
             Va=linspace( 0,8,Ng)
             Vr=linspace(-1,1,Ng)
             T_axial=F_int['Ttop'](Va,0*Va)
             T_radz1=F_int['Ttop'](Ng*[1.0],Vr)
             T_radz2=F_int['Ttop'](Ng*[2.5],Vr)
+            H_axial=F_int['Hbot'](Va,0*Va)
             ax_a.plot(Va,T_axial-273.15,'k')
             ax_r.plot(Vr,T_radz1-273.15,'b')
             ax_r.plot(Vr,T_radz2-273.15,'r')
-            util.SaveFig(fig_a,dirp+'T-Axial.' +type)
-            util.SaveFig(fig_r,dirp+'T-Radial.'+type)
+            ax_h.plot(Va,-H_axial*1e-3,'r')
 if PROF : 
     for k in Param_prof.keys() : util.SaveFig(FIG_P[k],d_compa+Param_prof[k][-1])
 
 MoyT=array(MoyT)
 DevT=array(DevT)
+
+#%%=================================================================================
+#                     Plotting walls
+#===================================================================================
+if WALLS :
+    if PRECIZE :
+        axV.legend()
+        util.SaveFig(figV,d_compa+'T-Voute-Int.'+type)
+    elif ALICE :
+        ax_a.legend()
+        ax_r.legend()
+        ax_h.legend()
+        util.SaveFig(fig_a,d_compa+'T-Axial.' +type)
+        util.SaveFig(fig_r,d_compa+'T-Radial.'+type)
+        util.SaveFig(fig_h,d_compa+'H-Axial.' +type)
 
 #%%=================================================================================
 #                     Plotting Temperature
