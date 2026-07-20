@@ -30,8 +30,8 @@ t0=time.time()
 #===================================================================================
 
 # param=Sysa[0]
-# param='Pilot'
-param='Alice'
+param='Pilot'
+# param='Alice'
 if ALICE : param='Alice'
 if   'Walter' in param : from ParamWalter   import *
 elif 'Pilot'  in param : from ParamPilotV2  import *
@@ -71,7 +71,7 @@ P_h2=   Hyb *Pow*1e3 # Hydrogen power (W)
 P_gn=(1-Hyb)*Pow*1e3 # Natural gas power (W)
 M_h2=P_h2/fl.PCI['H2'] # Hydrogen mass flow rate (Kg/s)
 M_gn=P_gn/PCI_GN       # Natural gas mass flow rate (Kg/s)
-M_f=M_h2+M_gn        # Total fuel mass flow rate (Kg/s)
+M_f=M_h2+M_gn     # Total fuel mass flow rate (Kg/s)
 M_t=    Rep *M_f  # Top mass flow rate (Kg/s)
 M_b= (1-Rep)*M_f  # Bottom mass flow rate (Kg/s)
 M_tc=   Imp *M_t  # Top central jet mass flow rate (Kg/s)
@@ -185,11 +185,20 @@ if FIT :
 #                     Klinker
 #===================================================================================
 if FIT :
-    y_vap_feed=(y_humid_caco3*y_caco3_feed+y_humid_alooh*y_alooh_feed) # mass fraction of humidity in raw material
-    y_h2o_feed=(                             y_h2o_alooh*y_alooh_feed) # mass fraction of humidity in raw material
-    y_co2_feed=(y_co2_caco3*y_caco3_feed) # mass fraction of CO2      in raw material
+    y_vap_feed  =(y_humid_caco3*y_caco3_feed+y_humid_alooh*y_alooh_feed) # mass fraction of humidity in raw material
+    y_h2o_feed  =(                             y_h2o_alooh*y_alooh_feed) # mass fraction of water in raw material
+    y_co2_feed  =(y_co2_caco3*y_caco3_feed) # mass fraction of CO2 in raw material
     y_kk=1-(y_h2o_feed+y_co2_feed) # mass fraction of klinker in raw material
     mdot_rm=mdot_kk/y_kk           # mass flow rate of raw material
+    mdot_rm*=(1e3/(3600*24)) # [kg/s]
+
+    ytot_alooh=y_h2o_alooh+y_feo_alooh+y_alo_alooh
+    y_h2o_alooh2=y_h2o_alooh/ytot_alooh
+    y_feo_alooh2=y_feo_alooh/ytot_alooh
+    y_alo_alooh2=y_alo_alooh/ytot_alooh
+    y_h2o_feed2=y_h2o_alooh2*y_alooh_feed  # mass fraction of H2O   in raw material after resizing
+    y_alo_feed2=y_alo_alooh2*y_alooh_feed  # mass fraction of Al2O3 in raw material after resizing
+    y_feo_feed2=y_feo_alooh2*y_alooh_feed  # mass fraction of Fe2O3 in raw material after resizing
 
     print('=> y_vap_feed : ',y_vap_feed)
     print('=> y_h2o_feed : ',y_h2o_feed)
@@ -197,8 +206,8 @@ if FIT :
     mdot_h2o=(y_h2o_feed+y_vap_feed)*mdot_rm
     mdot_co2= y_co2_feed            *mdot_rm
 
-    mdot_h2o*=(1e3/(3600*24)) # [kg/s]
-    mdot_co2*=(1e3/(3600*24)) # [kg/s]
+    # mdot_h2o*=(1e3/(3600*24)) # [kg/s]
+    # mdot_co2*=(1e3/(3600*24)) # [kg/s]
 
     RM_co2_h2o=mdot_co2/mdot_h2o
     RM_co2_o2 =mdot_co2/MO
@@ -290,6 +299,7 @@ if FILE :
         Param["eps_refract"           ]=[ f'{e_refract   :.2f}'  , ''             , "eps_refract"           , ''                          ]
         Param["eps_shell"             ]=[ f'{e_shell     :.2f}'  , ''             , "eps_shell"             , ''                          ]
         Param["eps_ss304"             ]=[ f'{e_ss304     :.2f}'  , ''             , "eps_ss304"             , ''                          ]
+        Param["htc_bc"                ]=[ f'{h_bc        :.0f}'  , ' [W/(m^2 K)]' , "htc_bc"                , 'heat-transfer-coefficient' ]
         Param["htc_wb"                ]=[ f'{h_wb        :.0f}'  , ' [W/(m^2 K)]' , "htc_wb"                , 'heat-transfer-coefficient' ]
         Param["htc_nat"               ]=[ f'{h_nat       :.0f}'  , ' [W/(m^2 K)]' , "htc_nat"               , 'heat-transfer-coefficient' ]
         Param["htc_col"               ]=[ f'{h_col       :.0f}'  , ' [W/(m^2 K)]' , "htc_col"               , 'heat-transfer-coefficient' ]
@@ -302,6 +312,7 @@ if FILE :
         Param["mdot_oxid_top"         ]=[ f'{MO_t *fac   :.12e}' , ' [%s]'%(unit) , "mdot_oxid_top"         , 'mass-flow'                 ]
         Param["mdot_oxid_bottom"      ]=[ f'{MO_bc*fac   :.12e}' , ' [%s]'%(unit) , "mdot_oxid_bottom"      , 'mass-flow'                 ]
         Param["mdot_oxid_staged"      ]=[ f'{MO_bs*fac   :.12e}' , ' [%s]'%(unit) , "mdot_oxid_staged"      , 'mass-flow'                 ]
+        Param["mdot_rm"               ]=[ f'{mdot_rm*fac :.12e}' , ' [%s]'%(unit) , "mdot_rm"               , 'mass-flow'                 ]
         Param["mdot_h2o"              ]=[ f'{mdot_h2o*fac:.12e}' , ' [%s]'%(unit) , "mdot_h2o"              , 'mass-flow'                 ]
         Param["mdot_co2"              ]=[ f'{mdot_co2*fac:.12e}' , ' [%s]'%(unit) , "mdot_co2"              , 'mass-flow'                 ]
         Param["heat_sink"             ]=[ f'{heat_sink   :.6f}'  , ' [kW]'        , "heat_sink"             , ''                          ]
@@ -313,6 +324,10 @@ if FILE :
         Param["temp_fuel"             ]=[ f'{300         :.0f}'  , ' [K]'         , "temp_fuel"             , 'temperature'               ]
         Param["temp_oxid"             ]=[ f'{300         :.0f}'  , ' [K]'         , "temp_oxid"             , 'temperature'               ]
         Param["temp_water"            ]=[ f'{300         :.0f}'  , ' [K]'         , "temp_water"            , 'temperature'               ]
+        Param["y_caco3"               ]=[ f'{y_caco3_feed:.12e}' , ''             , "y_caco3"               , ''                          ]
+        Param["y_al2o3"               ]=[ f'{y_alo_feed2 :.12e}' , ''             , "y_al2o3"               , ''                          ]
+        Param["y_fe2o3"               ]=[ f'{y_feo_feed2 :.12e}' , ''             , "y_fe2o3"               , ''                          ]
+        Param["y_h2o"                 ]=[ f'{y_h2o_feed2 :.12e}' , ''             , "y_h2o"                 , ''                          ]
         Param["x_fuel_c2h6"           ]=[ f'{X_f['C2H6'] :.12e}' , ''             , "x_fuel_c2h6"           , ''                          ]
         Param["x_fuel_ch4"            ]=[ f'{X_f['CH4' ] :.12e}' , ''             , "x_fuel_ch4"            , ''                          ]
         Param["x_fuel_co2"            ]=[ f'{X_f['CO2' ] :.12e}' , ''             , "x_fuel_co2"            , ''                          ]

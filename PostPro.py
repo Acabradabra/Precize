@@ -13,7 +13,7 @@
 #                     Modules
 #===================================================================================
 import Utilities as util
-(Sysa,NSysa,Arg)=util.Parseur(['Temp','Compo','Report','Visu','Prof','Walls','Dump','Rad','UDF','Zoom','All'],1,'Arg : Case')
+(Sysa,NSysa,Arg)=util.Parseur(['Temp','Compo','Report','Visu','Prof','Walls','Dump','Rad','UDF','Zoom','All'],1,'Arg : Case(PRECIZE,ALICE)')
 (                             [ TEMP , COMPO , REPORT , VISU , PROF , WALLS , DUMP , RAD , UDF , ZOOM , ALL ])=Arg
 Case=Sysa[0]
 
@@ -94,8 +94,12 @@ Pos_V=[0.51,2.17,3.098] # Voute thermocouples positions (m)
 # T_exp=array([1214,1390,1123 , 1210])+273.15 # Pilot temperatures (K) 
 # T_exp=array([1159.1,1351,1110.8 , 1170.2])+273.15 # Pilot temperatures (K) 
 T_exp=array([ 1150,1400,1150 , 1350 ])+273.15 # Pilot temperatures (K) 
+T_ext=460 # Pilot external temperature (K)
 MoyT=[]
 DevT=[]
+Tbav=[]
+Teav=[]
+LabE=[]
 
 #===============> Param composition
 # dil=0.45 # dilution Mf_leak/Mf_tot
@@ -140,22 +144,29 @@ if WALLS :
         axV.plot(Pos_V,T_exp[:3],'ok',label='Pilot')
     elif ALICE :
         fig_a,ax_a=plt.subplots(figsize=(10,6))
-        fig_a.suptitle('Voute Temperature'  ,fontsize=25)
-        ax_a.set_xlabel('Axial position [m]',fontsize=20)
-        ax_a.set_ylabel('Temperature [°C]'   ,fontsize=20)
+        fig_a.suptitle('Voute Temperature'   ,fontsize=25)
+        ax_a.set_xlabel('Axial position [m]' ,fontsize=25)
+        ax_a.set_ylabel('Temperature [°C]'   ,fontsize=25)
         util.PlotIm(ax_a,'INPUT/Axial.png',[0,6.1,1300,1600])
         fig_r,ax_r=plt.subplots(figsize=(10,6))
         fig_r.suptitle('Voute Temperature'   ,fontsize=25)
-        ax_r.set_xlabel('Radial position [m]',fontsize=20)
-        ax_r.set_ylabel('Temperature [°C]'    ,fontsize=20)
+        ax_r.set_xlabel('Radial position [m]',fontsize=25)
+        ax_r.set_ylabel('Temperature [°C]'   ,fontsize=25)
         util.PlotIm(ax_r,'INPUT/Radial.png',[-1,1,1300,1600])
         fig_h,ax_h=plt.subplots(figsize=(10,6))
-        fig_h.suptitle('Floor heat flux'   ,fontsize=25)
-        ax_h.set_xlabel('Axial position [m]',fontsize=20)
-        ax_h.set_ylabel(r'Heat flux [$W/m^2$]'    ,fontsize=20)
+        fig_h.suptitle('Floor heat flux'      ,fontsize=25)
+        ax_h.set_xlabel('Axial position [m]'  ,fontsize=25)
+        ax_h.set_ylabel(r'Heat flux [$W/m^2$]',fontsize=25)
         ax_h.plot(pp.Pos_h,pp.Hf,'ok')
 #===================================================================================
 if COMPO :
+    fig_d,ax_d=plt.subplots(figsize=( 8,6),ncols=Nspe-2)
+    fig_d.suptitle(f'Dry molar fraction : {dil*1e2:.0f} % diluted',fontsize=20)
+    Ticks_c={}
+    for n,k in enumerate(Keys_d) :
+        ax_d[n].set_title(Titre[k],fontsize=16)
+        ax_d[n].set_xticks([])
+        Ticks_c[k]=[Compo_p[k]]
 #===================================================================================
 if PROF :
     FIG_P,AX_P={},{}
@@ -176,11 +187,15 @@ for nd,d0 in enumerate(Dirs) :
     print(util.Col('r','=> '+d)) ; dirp=d+'PLOT/'
     if TEMP   : #===========================================================================> Temperature
         f0=d+'report'
-        Dr=fl.Report_read(f0+'-temperature-rfile.out') ; Keys=list(Dr.keys()) ; Nl=len(Dr[Keys[0]]) ; Ns=min([Nl,Np]) ; KeysT=Keys
+        Dr=fl.Report_read(f0+'-temperature-rfile.out') ; Keys=list(Dr.keys()) ; Nl=len(Dr[Keys[0]]) ; Ns=min([Nl,Np])
+        KeysT=[ k for k in Keys if not 'external' in k ]
+        KeysE=[ k for k in Keys if     'external' in k ] ; LabE.append([ k.split('-')[1] for k in KeysE ])
         Id_v=[ KeysT.index(k) for k in names_voute if k in KeysT ]
         I_out=KeysT.index(name_out)
         MoyT.append([ mean(Dr[k][-Ns:]) for k in KeysT ]) ; Tb=float(MoyT[-1][I_out]) ; print(f'=> Mean burned temperature : {Tb:.0f} [K]')
         DevT.append([ std( Dr[k][-Ns:]) for k in KeysT ])
+        Tbav.append(Tb)
+        Teav.append([ mean(Dr[k][-Ns:]) for k in KeysE ])
         Dq=fl.Report_read(d+'report-heat-release-rfile.out') ; Keys=list(Dq.keys())
         Hr=mean(Dq[Keys[1]][-Ns:]) ; print(f'=> Mean heat release : {Hr*1e-3:.0f} [kW]')
         Dm=fl.Report_read(d+'report-mass-balance-rfile.out') ; Keys=list(Dm.keys())
@@ -190,9 +205,7 @@ for nd,d0 in enumerate(Dirs) :
         T_dil.append(Tb2)
     if COMPO  : #===========================================================================> Composition
         fig_c,ax_c=plt.subplots(figsize=(10,6),ncols=Nspe-1,nrows=2)
-        fig_d,ax_d=plt.subplots(figsize=( 8,6),ncols=Nspe-2)
         fig_c.suptitle('Molar fractions (%s)'%(probe),fontsize=20)
-        fig_d.suptitle(f'Dry molar fraction : {dil*1e2:.0f} % diluted',fontsize=20)
         for n,k in enumerate(Rfiles) : #=====> Wet
             f_C=d+Rfiles[k]
             if os.path.exists(f_C) :
@@ -229,21 +242,23 @@ for nd,d0 in enumerate(Dirs) :
         C_dry=1-Xd_w['H2O']
         Xd_d={ k:Xd_w[k]/C_dry for k in Xd_w.keys() if k!='H2O' }
         for n,k in enumerate(Keys_d) : #=====> Dry + Dilution
-            E=100*abs(Compo_p[k]-Xd_d[k]*Coef[k])/Compo_p[k]
-            ax_d[n].plot(2*[0] , [Compo_p[k],Xd_d[k]*Coef[k]] , ':k')
-            ax_d[n].plot(  [0] , [   Xd_d[k]*Coef[k]] , 'o'+Col_p[nd])
-            ax_d[n].plot(  [0] , [Compo_p[k]        ] , 'ok')
-            ax_d[n].set_xticks([])
-            ax_d[n].set_yticks([ round(x, 1) for x in sorted([Xd_d[k]*Coef[k],Compo_p[k]]) ])
-            ax_d[n].set_title(Titre[k],fontsize=16)
-            ax_d[n].set_xlabel(f'{E:.1f} % error',fontsize=12)
+            Diff=abs(Compo_p[k]-Xd_d[k]*Coef[k])
+            E=100*Diff/Compo_p[k]
+            compo=Xd_d[k]*Coef[k]
+            ax_d[n].plot(2*[0] , [Compo_p[k],compo] , ':k')
+            ax_d[n].plot(  [0] , [           compo] , 'o'+Col_p[nd])
+            ax_d[n].plot(  [0] , [Compo_p[k]      ] , 'ok')
+            # ax_d[n].text(0,compo,f'{E:.0f} [%]',fontsize=13,ha='center',va='center_baseline',color='w',bbox=dict(boxstyle="square",fc=Col_p[nd],ec=None))
+            ax_d[n].text(0,compo,f'{E:.0f} [%]',fontsize=13,ha='center',va='center_baseline',color=Col_p[nd],bbox=dict(boxstyle="square",fc='w',ec=Col_p[nd]))
+            Ticks_c[k].append(Xd_d[k]*Coef[k])
+            # ax_d[n].set_yticks([ round(x, 1) for x in sorted([Xd_d[k]*Coef[k],Compo_p[k]]) ])
+            # ax_d[n].set_xlabel(f'{E:.1f} % error',fontsize=12)
         print(f"=> Dil wet composition : O2 {Xd_w['O2']*Coef['O2']:.2f} [%]  ,  CO {Xd_w['CO']*Coef['CO']:.0f} [ppm]  ,  CO2 {Xd_w['CO2']*Coef['CO2']:.2f} [%]  ,  N2 {Xd_w['N2']*Coef['N2']:.2f} [%]  ,  H2O {Xd_w['H2O']*Coef['H2O']:.2f} [%]")
         print(f"=> Dil dry composition : O2 {Xd_d['O2']*Coef['O2']:.2f} [%]  ,  CO {Xd_d['CO']*Coef['CO']:.0f} [ppm]  ,  CO2 {Xd_d['CO2']*Coef['CO2']:.2f} [%]  ,  N2 {Xd_d['N2']*Coef['N2']:.2f} [%]")
         ax_c[1,-1].axis('off')
         ax_c[0,0].set_ylabel('Wet composition',fontsize=16)
         ax_c[1,0].set_ylabel('Dry composition',fontsize=16)
-        util.SaveFig( fig_c,d+'Plot/Compo-%s.pdf'%(probe) )
-        util.SaveFig( fig_d,d+'Plot/Compo-%s_diluted.pdf'%(probe) )
+        util.SaveFig( fig_c,dirp+'/Compo-%s.'%(probe)+type )
     if REPORT : #===========================================================================> Report
         for rf in [ r for r in os.popen('ls %s/report-*-rfile.out'%(d)).read().splitlines() if '' in r ] :
             r_name=rf.split('/')[-1][7:-10]
@@ -444,7 +459,7 @@ MoyT=array(MoyT)
 DevT=array(DevT)
 
 #%%=================================================================================
-#                     Plotting walls
+#                     Comparison
 #===================================================================================
 if WALLS :
     if PRECIZE :
@@ -457,39 +472,62 @@ if WALLS :
         util.SaveFig(fig_a,d_compa+'T-Axial.' +type)
         util.SaveFig(fig_r,d_compa+'T-Radial.'+type)
         util.SaveFig(fig_h,d_compa+'H-Axial.' +type)
-
+#===================================================================================
+if COMPO :
+    for n,k in enumerate(Keys_d) :
+        ax_d[n].set_yticks([ round(x, 0) for x in sorted(Ticks_c[k]) ])
+        # ax_d[n].set_xlabel('Molar fraction [%]',fontsize=16)
+    util.SaveFig( fig_d,d_compa+'/Compo-%s_diluted.'%(probe)+type )
 #%%=================================================================================
 #                     Plotting Temperature
 #===================================================================================
 if TEMP :
     fig_V,ax_V=plt.subplots(figsize=(8,6)) #=====> Voute
     fig_C,ax_C=plt.subplots(figsize=(8,6)) #=====> Chimney
-    labels=[ d.split('/')[-2].split('-')[-1] for d in Dirs ] ; Nl=len(labels)
+    fig_E,ax_E=plt.subplots(figsize=(8,6)) #=====> External
+    # labels=[ d.split('/')[-2].split('-')[-1] for d in Dirs ] ; Nl=len(labels)
+    labels=Lab_d ; Nl=len(labels)
     if Nl==1 : labels=['Simu']
     for i,l in enumerate(labels) :
-        Tchem=MoyT[i,I_out]
+        Tchem=Tbav[i]
+        Texte=Teav[i] ; Temean=mean(Texte)
         ax_C.plot([i,i],[T_exp[-1],Tchem],'k:',alpha=0.3)
         ax_C.plot([i  ], T_dil[i],'ko')
+        ax_E.plot([i],[Temean],'ok')
+        ax_E.plot(2*[i],[Temean,T_ext],':k') ; E=100*abs(Temean-T_ext)/T_ext
+        ax_E.text(i+0.025,Temean,f'{E:.0f} [%]',fontsize=8,color='k',va='center',ha='left')
+        for nt,T in enumerate(Texte) :
+            ax_E.plot([i], [T], 'o' + Col_p[i])
+            ax_E.text(i+0.025,T,LabE[i][nt],fontsize=8,color=Col_p[i],va='center',ha='left')
         Er=100*abs(Tchem-T_exp[ -1])/T_exp[ -1]
-        ax_C.text(i+0.1,0.5*(T_exp[ -1]+Tchem),f'{Er:.1f} %',fontsize=12,color='k')
-        ax_V.errorbar(Pos_V,MoyT[i,Id_v],yerr=DevT[i,Id_v ],marker='o',label=l)
-        ax_C.errorbar(i    ,Tchem       ,yerr=DevT[i,I_out],marker='o',label=l)
+        # ax_C.text(i+0.1,0.5*(T_exp[ -1]+Tchem),f'{Er:.1f} %',fontsize=12,color='k')
+        ax_C.text(i+0.1,Tchem,f'{Er:.1f} %',fontsize=12,color='k',va='center')
+        ax_V.errorbar(Pos_V,MoyT[i,Id_v],yerr=DevT[i,Id_v ],marker='o',color=Col_p[i],label=l)
+        ax_C.errorbar(i    ,Tchem       ,yerr=DevT[i,I_out],marker='o',color=Col_p[i],label=l)
     ax_V.plot(Pos_V ,   T_exp[:-1] ,'k-o',label='Pilote')
     ax_C.plot(   Nl ,   T_exp[ -1] ,'k-o',label='Pilote')
+    ax_E.plot(   Nl ,   T_ext      ,'k-o',label='Pilote')
     ax_C.plot([0,Nl],2*[T_exp[ -1]],'k--')
+    ax_E.plot([0,Nl],2*[T_ext],'k--')
 
     fig_V.suptitle('Mean Voute Temperature'  ,fontsize=20)
     fig_C.suptitle('Mean Chimney Temperature',fontsize=20)
+    fig_E.suptitle('Mean External Temperatures',fontsize=20)
     fig_V.legend(title='Case',fontsize=16,loc='lower left',bbox_to_anchor=(0.35,0.12))
-    ax_V.set_xlabel('X Position [m]'  ,fontsize=16)
-    ax_V.set_ylabel('Temperature [K]' ,fontsize=16)
-    ax_C.set_xlabel('Cases',fontsize=16)
-    ax_C.set_ylabel('Temperature [K]' ,fontsize=16)
+    ax_V.set_xlabel('X Position [m]'  ,fontsize=25)
+    ax_V.set_ylabel('Temperature [K]' ,fontsize=25)
+    ax_C.set_xlabel('Cases'           ,fontsize=25)
+    ax_C.set_ylabel('Temperature [K]' ,fontsize=25)
+    ax_E.set_xlabel('Cases'           ,fontsize=25)
+    ax_E.set_ylabel('Temperature [K]' ,fontsize=25)
     ax_V.set_xticks(Pos_V)
     ax_C.set_xticks(range(Nl+1))
+    ax_E.set_xticks(range(Nl+1))
     ax_V.set_xticklabels(['0.51','2.17','3.098'],fontsize=14)
     ax_C.set_xticklabels(labels+['Pilote'],fontsize=14)
+    ax_E.set_xticklabels(labels+['Pilote'],fontsize=14)
     fig_V.subplots_adjust(right=0.5)
 
-    util.SaveFig(fig_V,d_compa+'PLOT/T-Voute.pdf')
-    util.SaveFig(fig_C,d_compa+'PLOT/T-Chemine.pdf')
+    util.SaveFig(fig_V,d_compa+'/T-Voute.'+type)
+    util.SaveFig(fig_C,d_compa+'/T-Chemine.'+type)
+    util.SaveFig(fig_E,d_compa+'/T-External.'+type)

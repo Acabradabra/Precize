@@ -15,6 +15,7 @@ elif dir0[-2]=='1' : pmid='yz' ; pflo='yx'
 Dirs=[
 'DUMP-03-DO/'
 ]
+Labels=[ d.split('/')[-1].split('-')[-1] for d in Dirs ]
 
 #====================> Atmospheric conditions
 P_atm=101325 # [Pa] Atmospheric pressure

@@ -8,13 +8,16 @@ dfl='/mnt/beegfs/ZEUS/FLUENT/'
 # dir0=dfl+'PRECIZE/RUN-M01/'
 # dir0=dfl+'PRECIZE/RUN-M02/'
 # dir0=dfl+'PRECIZE/RUN-M03/'
-dir0=dfl+'PRECIZE/'
-Vs='V04'
+dir0=dfl+'PRECIZE/RUN-M04/'
+# dir0=dfl+'PRECIZE/'
+# Vs='V04'
+Vs='V00'
 
 #====================> Runs
 Dirs=[
 'RUN-M01/DUMP-18-OD2-Bath/',
-'RUN-M02/DUMP-00-Init/'
+# 'RUN-M02/DUMP-00-Init/'
+'RUN-M02/DUMP-01-Pstat/'
 ]
 Labels=[
 '75%',
@@ -40,28 +43,33 @@ M_jupe=50       # [g/s] Target mass flow rate through jupe
 nu=1.85e-5    # Pa.s Dynamic viscosity of air at atmospheric conditions (25d Pa)
 mu=nu/Rho_air # [m2/s] Kinematic viscosity of air at atmospheric conditions (25d Pa)
 
-#====================> Combustion parameters
-Hyb=1 # Hybridation (Hydrogen power fraction)
-Imp=0.6 # Impulse (Jet/Anular)
-Pow=800 # Power (KW)
+#====================> Feeding parameters
+Hyb=0     # Hybridation (Hydrogen power fraction)
+Imp=0.6   # Impulse (Jet/Anular)
+# Pow=800   # Power (KW)
+# mdot_kk=6 # [T/j] production klinker
+Pow=100   # Power (KW)
+mdot_kk=1 # [T/j] production klinker
 if Hyb==1 :
     Rep=0 # Repartition (Top/Bottom)
     l_gn=1    # Excess air ratio Natural gas 
     l_h2=1    # Excess air ratio Hydrogen
     Rb_o=0.15 # Repartition bottom oxygen (central)
 elif Hyb==0.5 :
-     Rep=0.5 # Repartition (Top/Bottom)
-     l_gn=0.95 # Excess air ratio Natural gas 
-     l_h2=1    # Excess air ratio Hydrogen
-     Rb_o=0.38 # Repartition bottom oxygen (central)
+    Rep=0.5 # Repartition (Top/Bottom)
+    l_gn=0.95 # Excess air ratio Natural gas 
+    l_h2=1    # Excess air ratio Hydrogen
+    Rb_o=0.38 # Repartition bottom oxygen (central)
+else :
+    Rep=0 # Repartition (Top/Bottom)
+    l_gn=1 # Excess air ratio Natural gas 
+    l_h2=1    # Excess air ratio Hydrogen
+    Rb_o=0.15 # Repartition bottom oxygen (central)
 
 N2  =False # Nitrogen in GN
 C3H8=False # Propane in GN
 
 Q_h=2.5 # [m3/h] Air flow rate for hublo
-
-#====================> Name
-f_param=dir0+f'SET/Set_{Hyb*100:.0f}ph2_{Pow*Rep:.0f}kWt_{Pow*(1-Rep):.0f}kWb_{l_gn*100:.0f}lgn_{l_h2*100:.0f}lh2_{Vs}.tsv'
 
 #====================> Bath
 Tbath=1600 # [°C] 100% H2
@@ -90,7 +98,8 @@ s_jb=17600 # [mm2] section jupe-bot
 p_jb=3520 # [mm] perimeter jupe-bot
 
 #====================> Convection
-h_wb=1000 # [W/(m2 K)] Heat transfer coefficient wall-bec
+h_bc=200 # [W/(m2 K)] Heat transfer coefficient bec
+h_wb=200 # [W/(m2 K)] Heat transfer coefficient water boxes
 h_nat=10 # [W/(m2 K)] Heat transfer coefficient Natural convection
 h_col=20 # [W/(m2 K)] Heat transfer coefficient Natural convection
 
@@ -100,7 +109,7 @@ e_shell=0.80 # Emissivity shell
 e_ss304=0.3 # Emissivity stainless steel 304L
 
 #====================> Klinker parameters
-mdot_kk=6 # [T/j] production klinker
+# mdot_kk=6 # [T/j] production klinker
 #=====> Walter
 # y_alooh_feed=0.3400
 # y_caco3_feed=0.5200
@@ -158,6 +167,8 @@ elif dir0=='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M02/' :
     if Dirs[0][5:7]=='01' :
         Param_visu['Psf' ][8]=[-5,25]
         Param_visu['Ptf' ][8]=[-5,50]
+#====================> Name
+f_param=dir0+f'SET/Set_{Hyb*100:.0f}ph2_{Pow*Rep:.0f}kWt_{Pow*(1-Rep):.0f}kWb_{l_gn*100:.0f}lgn_{l_h2*100:.0f}lh2_{Vs}_kk{mdot_kk:.0f}.tsv'
 
 #===============> Composition position
 # probe='outlet-fumes'
