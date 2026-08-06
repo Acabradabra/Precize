@@ -31,11 +31,11 @@ t0=time.time()
 #===================================================================================
 Np=int(1e3)
 Ng=int(1e3)
-Nskip=100
+Nskip=0
 type='svg'
 #===============> Cases
 PRECIZE,ALICE=False,False
-if   Case=='PRECIZE' : PRECIZE=True ; import ParamPilotV2 as pp
+if   Case=='PRECIZE' : PRECIZE=True ; import ParamPilotV3 as pp
 elif Case=='ALICE'   : ALICE  =True ; import ParamALICE   as pp
 else : sys.exit('=> Case not defined')
 #===============> ALL
@@ -53,7 +53,8 @@ Param_visu=pp.Param_visu
 if ALL   : 
     # Vars=list(Param_visu.keys())
     # Vars=[ 'Hr','Hbot','Tbot','Ttop','Tx_z','Tx','XCO2x','XH2Ox','XO2x','XN2x','YCO2x','YH2Ox','YO2x','YN2x','Psx','Ptx','Vy','Vy_z','Vx','Vx_z' ]
-    Vars=['Tx_z','Tx','XCO2x','XH2Ox','XO2x','XN2x','YCO2x','YH2Ox','YO2x','YN2x','Psx','Ptx','Vy','Vy_z','Vx','Vx_z' ]
+    # Vars=['Tx_z','Tx','XCO2x','XH2Ox','XO2x','XN2x','YCO2x','YH2Ox','YO2x','YN2x','Psx','Ptx','Vy','Vy_z','Vx','Vx_z' ]
+    Vars=['Vof','Rho','Visc','Velf']
 elif RAD : 
     Vars=['A0','A1','A2','A3','A4','K0','K1','K2','K3','K4','Wm','Tx']
     Param_visu['Tx'][-1][-1]=[300,2400]
@@ -262,11 +263,17 @@ for nd,d0 in enumerate(Dirs) :
     if REPORT : #===========================================================================> Report
         for rf in [ r for r in os.popen('ls %s/report-*-rfile.out'%(d)).read().splitlines() if '' in r ] :
             r_name=rf.split('/')[-1][7:-10]
-            Dr=fl.Report_read(rf) ; Keys=list(Dr.keys()) #; print(Keys)
-            if '(' in Keys[1] : Labels=['Iteration']+[ k.split('(')[1][:-1] for k in Keys[1:] if '(' in k ]
-            else              : Labels=Keys
+            Dr=fl.Report_read(rf) ; Keys=list(Dr.keys()) ; Labels=Keys ; print(Keys)
+            # if '(' in Keys[1] : Labels=['Iteration']+[ k.split('(')[1][:-1] for k in Keys[1:] if '(' in k ]
+            # else              : Labels=Keys
             print('=> \033[31m%s\033[0m : '%(r_name) , Labels )
+            INSTA='flow-time' in Keys
+            if INSTA : Time=Dr['flow-time'][Nskip:] ; Keys.remove('flow-time')
+            else     : Time=Dr['Iteration'][Nskip:]
+            # Time=Dr['Iteration'][Nskip:]*dt if dt>0 else Dr['Iteration'][Nskip:]
+            # Time=Dr['Iteration'][Nskip:]
             figr,axr=plt.subplots(figsize=(10,7)) #; bxr=axr.twinx()
+            axr.set_xlabel('Time [s]' if INSTA else 'Iteration',fontsize=25)
             if   r_name == 'mass-balance' and PRECIZE :
                 (Mf_f,Mf_o,Mf_b,Mf_l,Mf_s,Mb)=fl.Mf_sep2(Dr,Keys) ; Ns=min([len(Mb),Np])
                 Ma_f=mean(Mf_f[-Ns:])
@@ -308,6 +315,27 @@ for nd,d0 in enumerate(Dirs) :
                 axd[0].set_ylabel('Mass flow rate [g/s]',fontsize=25)
                 axd[0].legend(fontsize=15)
                 axd[1].legend(fontsize=15)
+                util.SaveFig(figd,dirp+'MassFlow-Details.pdf')
+            elif r_name == 'mass-balance_ph1' and PRECIZE :
+                axr.set_ylabel('Mdot phase 1 [g/s]',fontsize=25)
+                for n,k in enumerate(Keys[1:]) : axr.plot( Time,Dr[k][Nskip:]*1e3,label=Labels[n+1] )
+                if len(Keys)>2 : axr.legend(fontsize=15)
+                #======> Detail
+                (Mf_f,Mf_o,Mf_b,Mf_l,Mb)=fl.Mf_sep3(Dr,Keys) ; Ns=min([len(Mb),Np])
+                Ma_f=mean(Mf_f[-Ns:])
+                Ma_o=mean(Mf_o[-Ns:])
+                Ma_b=mean(Mf_b[-Ns:])
+                Ma_l=mean(Mf_l[-Ns:])
+                Mbal=mean(  Mb[-Ns:])
+                figd,axd=plt.subplots(figsize=(10,7))
+                axd.set_title('Mass balance phase 1',fontsize=25)
+                axd.set_xlabel('Time [s]' if INSTA else 'Iteration',fontsize=25)
+                axd.set_ylabel('Mass flow rate [g/s]',fontsize=25)
+                axd.plot( Time,1e3*Mf_f[Nskip:]  ,label='inlet-fuel'  )
+                axd.plot( Time,1e3*Mf_o[Nskip:]  ,label='inlet-oxid'  )
+                axd.plot( Time,1e3*Mf_b[Nskip:]  ,label='outlet'      )
+                axd.plot( Time,1e3*Mf_l[Nskip:]  ,label='leak'        )
+                axd.legend(fontsize=15)
                 util.SaveFig(figd,dirp+'MassFlow-Details.pdf')
             elif r_name == 'heat-release' :
                 axr.set_ylabel('Heat Release [kW]',fontsize=25)
@@ -391,7 +419,7 @@ for nd,d0 in enumerate(Dirs) :
                     axE.legend(fontsize=15)
                 util.SaveFig(figE,dirp+'T-External.pdf')
             else :
-                for n,k in enumerate(Keys[1:]) : axr.plot( Dr['Iteration'],Dr[k],label=Labels[n+1] )
+                for n,k in enumerate(Keys[1:]) : axr.plot( Time,Dr[k][Nskip:],label=Labels[n+1] )
                 if len(Keys)>2 : axr.legend(fontsize=15) #,loc='center',bbox_to_anchor=(0.7,0.3))
             # if len(Keys)>2 : figr.legend(fontsize=15,loc='center',bbox_to_anchor=(0.7,0.3))
             if r_name in ['heat-release','heat-loss','mass-balance','shell-loss','co2'] :

@@ -15,9 +15,7 @@ Vs='V00'
 
 #====================> Runs
 Dirs=[
-'RUN-M01/DUMP-18-OD2-Bath/',
-# 'RUN-M02/DUMP-00-Init/'
-'RUN-M02/DUMP-01-Pstat/'
+'DUMP-12-Visc001/',
 ]
 Labels=[
 '75%',
@@ -27,6 +25,7 @@ Labels=[
 #====================> Atmospheric conditions
 P_atm=101325 # [Pa] Atmospheric pressure
 T_atm=300 # [K] Atmospheric temperature
+# Rho_air=0 # [kg/m3] Density of air at atmospheric conditions
 Rho_air=1.17 # [kg/m3] Density of air at atmospheric conditions
 # Rho_air=1.15 # [kg/m3] Density of air at atmospheric conditions
 
@@ -47,9 +46,9 @@ mu=nu/Rho_air # [m2/s] Kinematic viscosity of air at atmospheric conditions (25d
 Hyb=0     # Hybridation (Hydrogen power fraction)
 Imp=0.6   # Impulse (Jet/Anular)
 # Pow=800   # Power (KW)
-# mdot_kk=6 # [T/j] production klinker
-Pow=1   # Power (KW)
-mdot_kk=6 # [T/j] production klinker
+mdot_kk=1 # [T/j] production klinker
+Pow=0   # Power (KW)
+# mdot_kk=600 # [T/j] production klinker
 if Hyb==1 :
     Rep=0 # Repartition (Top/Bottom)
     l_gn=1    # Excess air ratio Natural gas 
@@ -69,7 +68,8 @@ else :
 N2  =False # Nitrogen in GN
 C3H8=False # Propane in GN
 
-Q_h=2.5 # [m3/h] Air flow rate for hublo
+# Q_h=2.5 # [m3/h] Air flow rate for hublo
+Q_h=0 # [m3/h] Air flow rate for hublo
 
 #====================> Bath
 Tbath=1600 # [°C] 100% H2
@@ -142,19 +142,22 @@ heat_sink=-292 # [kW]
 #===============> Param Visualisation
 cmesh=0 # coef coordinate (0 : no ticks)
 # cmesh=1e2 # coef coordinate (0 : no ticks)
-# Vars=['Vcol','Tcol']
-Vars=[]
+# Vars=['Vf','Rho','Visc','Velf']
+Vars=['Velf']
 Param_visu={
-'Tcol' :['Data-F-yc.dat','xz','temperature'       ,'Temperature [K]'     ,[-0.3,0.3],[2,4]   ,[],cmesh,[]         ,(5,9) ,'inferno','Col-Temperature.png' ,['ISO',[1800]]],
-'Vcol' :['Data-F-yc.dat','xz','velocity-magnitude','Velocity [m/s]'      ,[-0.3,0.3],[2,3]   ,[],cmesh,[]         ,(7,9) ,'cividis','Col-Velocity.png'    ,['QUIV',[2e-2,2e-2,300]]],
-'YCO2f':['Data-F-x0.dat','yz','co2'               ,'$Y_{CO_2}$ [-]'      ,[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'viridis','Four-YCO2.png'       ,[]            ],
-'YH2Of':['Data-F-x0.dat','yz','h2o'               ,'$Y_{H_2O}$ [-]'      ,[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'viridis','Four-YH2O.png'       ,[]            ],
-'Tf'   :['Data-F-x0.dat','yz','temperature'       ,'Temperature [K]'     ,[]        ,[-0.2,2],[],cmesh,[ 290,2500],(15,7),'inferno','Four-Temperature.png',['ISO',[2000,2500]]],
-'Ptf'  :['Data-F-x0.dat','yz','total-pressure'    ,'Total pressure [Pa]' ,[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'cividis','Four-Pt.png'         ,['ISO',[0]]        ],
-'Psf'  :['Data-F-x0.dat','yz','pressure'          ,'Static pressure [Pa]',[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'cividis','Four-Ps.png'         ,['ISO',[0]]        ],
-'Velf' :['Data-F-x0.dat','yz','velocity-magnitude','Velocity [m/s]'      ,[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'cividis','Four-Velocity.png'   ,['QUIV',[1e-1,1e-1,300]]],
-'Ttop' :['Data-TOP.dat' ,'yx','temperature'       ,'Temperature [K]'     ,[]        ,[]      ,[],cmesh,[]         ,(15,7),'inferno','Top-Temperature.png' ,['INTERP']    ],
-'Htop' :['Data-TOP.dat' ,'yx','heat-flux'         ,'Heat flux [W/m2]'    ,[]        ,[]      ,[],cmesh,[]         ,(15,7),'inferno','Top-HeatFlux.png'    ,['INTERP']    ],
+'Tcol' :['Data-F-yc.dat','xz','temperature'       ,r'Temperature [K]'     ,[-0.3,0.3],[2,4]   ,[],cmesh,[]         ,(5,9) ,'inferno','Col-Temperature.png' ,['ISO',[1800]]],
+'Vcol' :['Data-F-yc.dat','xz','velocity-magnitude',r'Velocity [m/s]'      ,[-0.3,0.3],[2,3]   ,[],cmesh,[]         ,(7,9) ,'cividis','Col-Velocity.png'    ,['QUIV',[2e-2,2e-2,300]]],
+'Vf'   :['Data-F-x0.dat','yz','phase-2-vof'       ,r'$\alpha_2$ [-]'      ,[]        ,[]      ,[],cmesh,[]         ,(15,7),'cividis','Four-Vf.png'         ,['ISO',[0.2]]          ],
+'Rho'  :['Data-F-x0.dat','yz','density'           ,r'$\rho$ [$kg/m^3$]'   ,[]        ,[]      ,[],cmesh,[]         ,(15,7),'cividis','Four-Rho.png'        ,[]],
+'Visc' :['Data-F-x0.dat','yz','viscosity-lam'     ,r'$\mu$ [$mPa.s$]'     ,[]        ,[]      ,[],cmesh,[]         ,(15,7),'cividis','Four-Visc.png'       ,['GAIN',1e3]],
+'YCO2f':['Data-F-x0.dat','yz','co2'               ,r'$Y_{CO_2}$ [-]'      ,[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'viridis','Four-YCO2.png'       ,[]],
+'YH2Of':['Data-F-x0.dat','yz','h2o'               ,r'$Y_{H_2O}$ [-]'      ,[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'viridis','Four-YH2O.png'       ,[]],
+'Tf'   :['Data-F-x0.dat','yz','temperature'       ,r'Temperature [K]'     ,[]        ,[-0.2,2],[],cmesh,[ 290,2500],(15,7),'inferno','Four-Temperature.png',['ISO',[2000,2500]]],
+'Ptf'  :['Data-F-x0.dat','yz','total-pressure'    ,r'Total pressure [Pa]' ,[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'cividis','Four-Pt.png'         ,['ISO',[0]]        ],
+'Psf'  :['Data-F-x0.dat','yz','pressure'          ,r'Static pressure [Pa]',[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'cividis','Four-Ps.png'         ,['ISO',[0]]        ],
+'Velf' :['Data-F-x0.dat','yz','velocity-magnitude',r'Velocity [m/s]'      ,[]        ,[-0.2,2],[],cmesh,[]         ,(15,7),'cividis','Four-Velocity.png'   ,['QUIV',[5e-2,5e-2,50]]],
+'Ttop' :['Data-TOP.dat' ,'yx','temperature'       ,r'Temperature [K]'     ,[]        ,[]      ,[],cmesh,[]         ,(15,7),'inferno','Top-Temperature.png' ,['INTERP']    ],
+'Htop' :['Data-TOP.dat' ,'yx','heat-flux'         ,r'Heat flux [$W/m^2$]' ,[]        ,[]      ,[],cmesh,[]         ,(15,7),'inferno','Top-HeatFlux.png'    ,['INTERP']    ],
 }
 if dir0=='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M01/' :
     Param_visu['Ptf' ][8]=[-30,20]

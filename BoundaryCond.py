@@ -34,7 +34,7 @@ param='Pilot'
 # param='Alice'
 if ALICE : param='Alice'
 if   'Walter' in param : from ParamWalter   import *
-elif 'Pilot'  in param : from ParamPilotV2  import *
+elif 'Pilot'  in param : from ParamPilotV3  import *
 elif 'Alice'  in param : from ParamALICE    import * ; ALICE=True
 else                   : raise ValueError('Unknown param file !')
 FIT=(not ALICE)
@@ -333,6 +333,12 @@ if FILE :
         Param["x_fuel_co2"            ]=[ f'{X_f['CO2' ] :.12e}' , ''             , "x_fuel_co2"            , ''                          ]
         Param["x_fuel_h2"             ]=[ f'{X_f['H2'  ] :.12e}' , ''             , "x_fuel_h2"             , ''                          ]
         Param["x_oxid_o2"             ]=[ f'{ 1          :.0f}'  , ''             , "x_oxid_o2"             , ''                          ]
+        Param["rho_h2o"               ]=[ f'{ Rho_h2o    :.0f}'  , ' [kg/m^3]'    , "rho_h2o"               , 'density'                   ]
+        Param["rho_cao"               ]=[ f'{ Rho_h2o    :.0f}'  , ' [kg/m^3]'    , "rho_cao"               , 'density'                   ]
+        Param["rho_alo"               ]=[ f'{ Rho_h2o    :.0f}'  , ' [kg/m^3]'    , "rho_alo"               , 'density'                   ]
+        Param["rho_feo"               ]=[ f'{ Rho_h2o    :.0f}'  , ' [kg/m^3]'    , "rho_feo"               , 'density'                   ]
+        Param["rho_cac"               ]=[ f'{ Rho_h2o    :.0f}'  , ' [kg/m^3]'    , "rho_cac"               , 'density'                   ]
+        Param["rho_co2"               ]=[ f'{ Rho_h2o    :.0f}'  , ' [kg/m^3]'    , "rho_co2"               , 'density'                   ]
         Param["hd_fc"                 ]=[ f'{ hd_fc      :.3f}'  , ' [mm]'        , "hd_fc"                 , 'length'                    ]
         Param["hd_fs"                 ]=[ f'{ hd_fs      :.3f}'  , ' [mm]'        , "hd_fs"                 , 'length'                    ]
         Param["hd_oh"                 ]=[ f'{ hd_oh      :.3f}'  , ' [mm]'        , "hd_oh"                 , 'length'                    ]
