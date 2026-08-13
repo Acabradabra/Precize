@@ -11,11 +11,11 @@ dfl='/mnt/beegfs/ZEUS/FLUENT/'
 dir0=dfl+'PRECIZE/RUN-M04/'
 # dir0=dfl+'PRECIZE/'
 # Vs='V04'
-Vs='V00'
+Vs='V02'
 
 #====================> Runs
 Dirs=[
-'DUMP-12-Visc001/',
+'DUMP-27-GP/',
 ]
 Labels=[
 '75%',
@@ -45,10 +45,12 @@ mu=nu/Rho_air # [m2/s] Kinematic viscosity of air at atmospheric conditions (25d
 #====================> Feeding parameters
 Hyb=0     # Hybridation (Hydrogen power fraction)
 Imp=0.6   # Impulse (Jet/Anular)
-# Pow=800   # Power (KW)
-mdot_kk=1 # [T/j] production klinker
-Pow=0   # Power (KW)
+Pow=800   # Power (KW)
+mdot_kk=6 # [T/j] production klinker
+# Pow=10    # Power (KW)
 # mdot_kk=600 # [T/j] production klinker
+Q_h=2.5 # [m3/h] Air flow rate for hublo
+# Q_h=1 # [m3/h] Air flow rate for hublo
 if Hyb==1 :
     Rep=0 # Repartition (Top/Bottom)
     l_gn=1    # Excess air ratio Natural gas 
@@ -65,11 +67,9 @@ else :
     l_h2=1    # Excess air ratio Hydrogen
     Rb_o=0.15 # Repartition bottom oxygen (central)
 
-N2  =False # Nitrogen in GN
+N2  =True  # Nitrogen in GN
 C3H8=False # Propane in GN
-
-# Q_h=2.5 # [m3/h] Air flow rate for hublo
-Q_h=0 # [m3/h] Air flow rate for hublo
+C2H6=False # Ethane in GN
 
 #====================> Bath
 Tbath=1600 # [°C] 100% H2
@@ -116,25 +116,21 @@ e_ss304=0.3 # Emissivity stainless steel 304L
 # y_humid_feed=0.0075
 # y_h2o_alooh=0.150156
 # y_co2_caco3=0.439712
+#=====> Material
+Rho_h2o= 997 # kg/m3
+Rho_cao=3300 # kg/m3
+Rho_alo=3500 # kg/m3
+Rho_feo=5240 # kg/m3
+Rho_cac=2700 # kg/m3
+Rho_co2=1.79 # kg/m3
+W_cac=100.08935
+W_cao=56.0794
+W_co2=44.00995
 #=====> New
 y_alooh_feed=0.512
 y_caco3_feed=0.488
-y_humid_caco3=0.35e-2
-y_humid_alooh=0.5e-2
-y_h2o_alooh=0.112
-y_feo_alooh=0.2323
-y_sio_alooh=0.0427
-y_tio_alooh=0.0283
-y_alo_alooh=0.5668
-y_co2_caco3=0.426
-y_cao_caco3=0.539
-#=====> Material
-Rho_h2o=100 # kg/m3
-Rho_cao=100 # kg/m3
-Rho_alo=100 # kg/m3
-Rho_feo=100 # kg/m3
-Rho_cac=100 # kg/m3
-Rho_co2=1   # kg/m3
+Compo_alooh={'H2O' : 0.112 , 'Fe2O3' : 0.2323 , 'SiO2' : 0.0427 , 'TiO2' : 0.0283 , 'AL2O3' : 0.5668 , 'Vap' : 0.005 }
+Compo_caco3={'CaO' : 0.539 , 'CO2' : 0.426 , 'Vap' : 0.0035 }
 #=====> heat loss
 # heat_sink=-187.030729
 heat_sink=-292 # [kW]
@@ -178,7 +174,7 @@ elif dir0=='/mnt/scratch/ZEUS/FLUENT/PRECIZE/RUN-M02/' :
         Param_visu['Psf' ][8]=[-5,25]
         Param_visu['Ptf' ][8]=[-5,50]
 #====================> Name
-f_param=dir0+f'SET/Set_{Hyb*100:.0f}ph2_{Pow*Rep:.0f}kWt_{Pow*(1-Rep):.0f}kWb_{l_gn*100:.0f}lgn_{l_h2*100:.0f}lh2_{Vs}_kk{mdot_kk:.0f}.tsv'
+f_param=dir0+f'SET/Set_{Hyb*100:.0f}ph2_{Pow*Rep:.0f}kWt_{Pow*(1-Rep):.0f}kWb_{l_gn*100:.0f}lgn_{l_h2*100:.0f}lh2_kk{mdot_kk:.0f}_{Vs}.tsv'
 
 #===============> Composition position
 # probe='outlet-fumes'

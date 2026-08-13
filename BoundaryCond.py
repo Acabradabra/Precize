@@ -55,10 +55,14 @@ if ALICE  :
     Xf_GN['C2H6']+=sum( [ GN_compo[k] for k in ['C3H8','C4H10','C5H12','C6H14'] ] )
     print(util.Col('g','=> AL GN Composition :'))
     for k in Xf_GN.keys() : print(f'=> X {k} : {Xf_GN[k]:.6f}')
-elif C3H8 : Xf_GN=fl.Xf_GN
-else      :
-    Xf_GN={ k:x for (k,x) in fl.Xf_GN.items() if k!='C3H8' }
-    Xf_GN['C2H6']+=fl.Xf_GN['C3H8']
+else :
+    if not C3H8 or not C2H6 :
+        Xf_GN={ k:x for (k,x) in fl.Xf_GN.items() if k!='C3H8' }
+        Xf_GN['C2H6']+=fl.Xf_GN['C3H8']
+    if not C2H6 :
+        Xf_GN1={ k:x for (k,x) in Xf_GN.items() if k!='C2H6' }
+        Xf_GN1['CH4']+=Xf_GN['C2H6']
+        Xf_GN=Xf_GN1
 if not N2 : 
     XN2_0=Xf_GN.pop('N2')
     Xf_GN={ k:Xf_GN[k]/(1-XN2_0) for k in Xf_GN.keys() }
@@ -185,20 +189,24 @@ if FIT :
 #                     Klinker
 #===================================================================================
 if FIT :
-    y_vap_feed  =(y_humid_caco3*y_caco3_feed+y_humid_alooh*y_alooh_feed) # mass fraction of humidity in raw material
-    y_h2o_feed  =(                             y_h2o_alooh*y_alooh_feed) # mass fraction of water in raw material
-    y_co2_feed  =(y_co2_caco3*y_caco3_feed) # mass fraction of CO2 in raw material
-    y_kk=1-(y_h2o_feed+y_co2_feed) # mass fraction of klinker in raw material
+    y_vap_feed  =(y_caco3_feed*Compo_caco3['Vap']+y_alooh_feed*Compo_alooh['Vap']) # mass fraction of humidity in raw material
+    y_h2o_feed  =(                                y_alooh_feed*Compo_alooh['H2O']) # mass fraction of water in raw material
+    y_co2_feed  =(y_caco3_feed*Compo_caco3['CO2']) # mass fraction of CO2 in raw material
+    y_kk=1-(y_h2o_feed+y_co2_feed+y_vap_feed) # mass fraction of klinker in raw material
     mdot_rm=mdot_kk/y_kk           # mass flow rate of raw material
     mdot_rm*=(1e3/(3600*24)) # [kg/s]
 
-    ytot_alooh=y_h2o_alooh+y_feo_alooh+y_alo_alooh
+    ytot_alooh=y_h2o_alooh+y_feo_alooh+y_alo_alooh # Part of selected species in alooh ( no Si,Ti )
     y_h2o_alooh2=y_h2o_alooh/ytot_alooh
     y_feo_alooh2=y_feo_alooh/ytot_alooh
     y_alo_alooh2=y_alo_alooh/ytot_alooh
-    y_h2o_feed2=y_h2o_alooh2*y_alooh_feed  # mass fraction of H2O   in raw material after resizing
-    y_alo_feed2=y_alo_alooh2*y_alooh_feed  # mass fraction of Al2O3 in raw material after resizing
-    y_feo_feed2=y_feo_alooh2*y_alooh_feed  # mass fraction of Fe2O3 in raw material after resizing
+    y_h2o_feed2= y_h2o_alooh2*y_alooh_feed # mass fraction of H2O   in raw material after resizing
+    y_alo_feed2= y_alo_alooh2*y_alooh_feed # mass fraction of Al2O3 in raw material after resizing
+    y_feo_feed2= y_feo_alooh2*y_alooh_feed # mass fraction of Fe2O3 in raw material after resizing
+    y_cao_feed2=(W_cao/W_cac)*y_caco3_feed # mass fraction of CaO   in raw material after resizing
+
+    y_feed2=y_alo_feed2+y_feo_feed2+y_cao_feed2 
+    Rho_kk=4e3
 
     print('=> y_vap_feed : ',y_vap_feed)
     print('=> y_h2o_feed : ',y_h2o_feed)
@@ -328,7 +336,7 @@ if FILE :
         Param["y_al2o3"               ]=[ f'{y_alo_feed2 :.12e}' , ''             , "y_al2o3"               , ''                          ]
         Param["y_fe2o3"               ]=[ f'{y_feo_feed2 :.12e}' , ''             , "y_fe2o3"               , ''                          ]
         Param["y_h2o"                 ]=[ f'{y_h2o_feed2 :.12e}' , ''             , "y_h2o"                 , ''                          ]
-        Param["x_fuel_c2h6"           ]=[ f'{X_f['C2H6'] :.12e}' , ''             , "x_fuel_c2h6"           , ''                          ]
+        if C2H6 : Param["x_fuel_c2h6" ]=[ f'{X_f['C2H6'] :.12e}' , ''             , "x_fuel_c2h6"           , ''                          ]
         Param["x_fuel_ch4"            ]=[ f'{X_f['CH4' ] :.12e}' , ''             , "x_fuel_ch4"            , ''                          ]
         Param["x_fuel_co2"            ]=[ f'{X_f['CO2' ] :.12e}' , ''             , "x_fuel_co2"            , ''                          ]
         Param["x_fuel_h2"             ]=[ f'{X_f['H2'  ] :.12e}' , ''             , "x_fuel_h2"             , ''                          ]
